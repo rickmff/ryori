@@ -82,63 +82,64 @@ export default function RestaurantePage() {
             <ReservationForm availability={availability} whatsappNumber={whatsappNumber} />
           </div>
         </section>
+        {categorizedMenu.entradas.length > 0 ? (
+          <section id="menu" className="py-16 bg-muted/50">
+            <div className="container">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl md:text-4xl font-bold mb-4">Menu</h2>
+                <p className="text-muted-foreground max-w-2xl mx-auto">
+                  Enaltecemos a cozinha Portuguesa com os melhores e mais frescos ingredientes em fusão com a alta cozinha Japonesa.
+                </p>
+              </div>
 
-        <section id="menu" className="py-16 bg-muted/50">
-          <div className="container">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Menu</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                Enaltecemos a cozinha Portuguesa com os melhores e mais frescos ingredientes em fusão com a alta cozinha Japonesa.
-              </p>
-            </div>
+              <Tabs defaultValue="entradas" className="w-full max-w-4xl mx-auto">
+                <TabsList className="grid grid-cols-2 sm:grid-cols-4 mb-8">
+                  <TabsTrigger value="entradas">Entradas</TabsTrigger>
+                  <TabsTrigger value="principais">Principais</TabsTrigger>
+                  <TabsTrigger value="sobremesas">Sobremesas</TabsTrigger>
+                  <TabsTrigger value="bebidas">Bebidas</TabsTrigger>
+                </TabsList>
 
-            <Tabs defaultValue="entradas" className="w-full max-w-4xl mx-auto">
-              <TabsList className="grid grid-cols-2 sm:grid-cols-4 mb-8">
-                <TabsTrigger value="entradas">Entradas</TabsTrigger>
-                <TabsTrigger value="principais">Principais</TabsTrigger>
-                <TabsTrigger value="sobremesas">Sobremesas</TabsTrigger>
-                <TabsTrigger value="bebidas">Bebidas</TabsTrigger>
-              </TabsList>
+                <TabsContent value="entradas" className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-              <TabsContent value="entradas" className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {categorizedMenu.entradas.length > 0 ? (
                   categorizedMenu.entradas.map((item) => (
-                    <MenuItem key={item.id} item={item} />
+                  <MenuItem key={item.id} item={item} />
                   ))
-                ) : <p className="text-muted-foreground md:col-span-2">Sem entradas disponíveis no momento.</p>}
-              </TabsContent>
 
-              <TabsContent value="principais" className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {categorizedMenu.principais.length > 0 ? (
-                  categorizedMenu.principais.map((item) => (
-                    <MenuItem key={item.id} item={item} />
-                  ))
-                ) : <p className="text-muted-foreground md:col-span-2">Sem pratos principais disponíveis no momento.</p>}
-              </TabsContent>
+                </TabsContent>
 
-              <TabsContent value="sobremesas" className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {categorizedMenu.sobremesas.length > 0 ? (
-                  categorizedMenu.sobremesas.map((item) => (
-                    <MenuItem key={item.id} item={item} />
-                  ))
-                ) : <p className="text-muted-foreground md:col-span-2">Sem sobremesas disponíveis no momento.</p>}
-              </TabsContent>
+                <TabsContent value="principais" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {categorizedMenu.principais.length > 0 ? (
+                    categorizedMenu.principais.map((item) => (
+                      <MenuItem key={item.id} item={item} />
+                    ))
+                  ) : <p className="text-muted-foreground md:col-span-2">Sem pratos principais disponíveis no momento.</p>}
+                </TabsContent>
 
-              <TabsContent value="bebidas" className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {categorizedMenu.bebidas.length > 0 ? (
-                  categorizedMenu.bebidas.map((item) => (
-                    <MenuItem key={item.id} item={item} />
-                  ))
-                ) : <p className="text-muted-foreground md:col-span-2">Sem bebidas disponíveis no momento.</p>}
-              </TabsContent>
-            </Tabs>
-          </div>
-        </section>
+                <TabsContent value="sobremesas" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {categorizedMenu.sobremesas.length > 0 ? (
+                    categorizedMenu.sobremesas.map((item) => (
+                      <MenuItem key={item.id} item={item} />
+                    ))
+                  ) : <p className="text-muted-foreground md:col-span-2">Sem sobremesas disponíveis no momento.</p>}
+                </TabsContent>
 
-        <section id="local" className="py-16 bg-muted/50">
+                <TabsContent value="bebidas" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {categorizedMenu.bebidas.length > 0 ? (
+                    categorizedMenu.bebidas.map((item) => (
+                      <MenuItem key={item.id} item={item} />
+                    ))
+                  ) : <p className="text-muted-foreground md:col-span-2">Sem bebidas disponíveis no momento.</p>}
+                </TabsContent>
+              </Tabs>
+            </div>
+          </section>
+        ) : null}
+
+        <section id="local" className="py-16 bg-background">
           <div className="container">
             <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Nossa Localização</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Localização</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
                 Estamos localizados em um ponto privilegiado, com fácil acesso.
               </p>
@@ -198,7 +199,7 @@ export default function RestaurantePage() {
         </section>
       </main>
 
-      <footer className="border-t py-8 bg-muted/30">
+      <footer className="border-t py-8 bg-background">
         <div className="container">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
             <div>

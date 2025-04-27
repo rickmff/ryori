@@ -29,7 +29,15 @@ export function NavBar() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex gap-6 tracking-wide items-center">
-          {["Reservations", "Menu", "Location"].map((item) => (
+          <motion.a
+            href="/sobre"
+            className="text-sm font-medium"
+            initial="rest"
+            whileHover="hover"
+          >
+            Sobre
+          </motion.a>
+          {["Menu", "Location"].map((item) => (
             <motion.a
               key={item}
               href={`#${item.toLowerCase()}`}

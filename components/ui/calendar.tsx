@@ -52,8 +52,8 @@ function Calendar({
       classNames={{
         months: "flex flex-col space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
-        caption: "flex pt-1 relative items-center justify-center",
-        caption_label: "text-sm font-medium",
+        caption: "flex py-4 relative items-center justify-center",
+        caption_label: "text-lg font-medium mb-2",
         nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),

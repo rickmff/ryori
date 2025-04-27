@@ -62,7 +62,7 @@ export function ReservationForm({ availability, whatsappNumber }: ReservationFor
     <div className="bg-card p-6 rounded-lg border">
       <form className="space-y-4">
         <div className="space-y-2">
-          <Calendar mode="single" selected={date} onSelect={setDate} className="border rounded-md" />
+          <Calendar mode="single" selected={date} onSelect={setDate} />
         </div>
 
         <div className="space-y-2 sm:col-span-2">
@@ -93,11 +93,11 @@ export function ReservationForm({ availability, whatsappNumber }: ReservationFor
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="space-y-2 w-full">
             <label htmlFor="name" className="text-sm font-medium">
-              Nome completo
+              Nome
             </label>
             <Input
               id="name"
-              placeholder="Seu nome completo"
+              placeholder="Seu nome"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
