@@ -102,9 +102,9 @@ export default function RestaurantePage() {
 
                 <TabsContent value="entradas" className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                  categorizedMenu.entradas.map((item) => (
-                  <MenuItem key={item.id} item={item} />
-                  ))
+                  {categorizedMenu.entradas.map((item) => (
+                    <MenuItem key={item.id} item={item} />
+                  ))}
 
                 </TabsContent>
 
