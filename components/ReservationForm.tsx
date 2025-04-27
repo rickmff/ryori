@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { DayAvailabilityType, TimeSlotType } from "@/lib/admin-store" // Assuming types are exported
+import type { DayAvailabilityType, TimeSlotType } from "@/lib/admin-store"
 
 interface ReservationFormProps {
   availability: DayAvailabilityType[]
-  whatsappNumber: string // Pass WhatsApp number as a prop
+  whatsappNumber: string
 }
 
 export function ReservationForm({ availability, whatsappNumber }: ReservationFormProps) {
@@ -23,8 +23,6 @@ export function ReservationForm({ availability, whatsappNumber }: ReservationFor
 
   // State for reservation form fields
   const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
-  const [phone, setPhone] = useState("")
   const [guests, setGuests] = useState("")
   const [notes, setNotes] = useState("")
 
@@ -32,7 +30,6 @@ export function ReservationForm({ availability, whatsappNumber }: ReservationFor
   useEffect(() => {
     if (date && availability.length > 0) {
       const dayOfWeek = date.getDay()
-      // Convert de 0-6 (domingo-sábado) para 6,0-5 (domingo=6, segunda=0, etc.) used by admin store
       const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1
       const currentDay = availability[dayIndex]
       setSelectedDay(currentDay)
@@ -42,26 +39,22 @@ export function ReservationForm({ availability, whatsappNumber }: ReservationFor
       } else {
         setAvailableTimeSlots([])
       }
-      setSelectedTime("") // Reset time when date changes
+      setSelectedTime("")
     }
   }, [date, availability])
 
-  // Function to handle reservation and redirect to WhatsApp
   const handleReservation = () => {
     if (!date || !selectedTime || !guests || !name) {
-      // Basic validation: ensure required fields are filled
       alert("Por favor, preencha nome, data, horário e número de pessoas.")
       return
     }
 
-    const formattedDate = date.toLocaleDateString("pt-PT") // Format date as dd/mm/yyyy for Portugal
+    const formattedDate = date.toLocaleDateString("pt-PT")
+    const message = `Olá, gostaria de fazer uma reserva:\\n\\nNome: ${name}\\nData: ${formattedDate}\\nHorário: ${selectedTime}\\nPessoas: ${guests}\\nObservações: ${notes || "Nenhuma"}`
 
-    const message = `Olá, gostaria de fazer uma reserva:\\n\\nNome: ${name}\\nEmail: ${email || "Não informado"}\\nTelefone: ${phone || "Não informado"}\\nData: ${formattedDate}\\nHorário: ${selectedTime}\\nPessoas: ${guests}\\nObservações: ${notes || "Nenhuma"}`
-
-    const cleanWhatsappNumber = whatsappNumber.replace(/[\s+]/g, "") // Remove '+' and spaces
+    const cleanWhatsappNumber = whatsappNumber.replace(/[\s+]/g, "")
     const whatsappUrl = `https://wa.me/${cleanWhatsappNumber}?text=${encodeURIComponent(message)}`
 
-    // Redirect user to WhatsApp
     window.location.href = whatsappUrl
   }
 
@@ -69,78 +62,49 @@ export function ReservationForm({ availability, whatsappNumber }: ReservationFor
     <div className="bg-card p-6 rounded-lg border">
       <form className="space-y-4">
         <div className="space-y-2">
-          <label htmlFor="name" className="text-sm font-medium">
-            Nome completo
-          </label>
-          <Input
-            id="name"
-            placeholder="Seu nome completo"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="email" className="text-sm font-medium">
-            E-mail
-          </label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="seu@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="phone" className="text-sm font-medium">
-            Telefone
-          </label>
-          <Input
-            id="phone"
-            placeholder="(00) 00000-0000"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Data</label>
           <Calendar mode="single" selected={date} onSelect={setDate} className="border rounded-md" />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label htmlFor="time" className="text-sm font-medium">
-              Horário
+        <div className="space-y-2 sm:col-span-2">
+          <label className="text-sm font-medium">
+            Horário
+          </label>
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            {!selectedDay || !selectedDay.enabled ? (
+              <p className="text-sm text-muted-foreground col-span-full">Dia indisponível</p>
+            ) : availableTimeSlots.length === 0 ? (
+              <p className="text-sm text-muted-foreground col-span-full">Sem horários disponíveis</p>
+            ) : (
+              availableTimeSlots.map((slot) => (
+                <Button
+                  key={slot.id}
+                  variant={selectedTime === slot.time ? "default" : "outline"}
+                  onClick={() => setSelectedTime(slot.time)}
+                  type="button"
+                  className="w-full justify-center"
+                >
+                  {slot.time}
+                </Button>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="space-y-2 w-full">
+            <label htmlFor="name" className="text-sm font-medium">
+              Nome completo
             </label>
-            <Select value={selectedTime} onValueChange={setSelectedTime} disabled={!selectedDay || !selectedDay.enabled}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                {!selectedDay || !selectedDay.enabled ? (
-                  <SelectItem value="indisponivel" disabled>
-                    Dia indisponível
-                  </SelectItem>
-                ) : availableTimeSlots.length === 0 ? (
-                  <SelectItem value="indisponivel" disabled>
-                    Sem horários disponíveis
-                  </SelectItem>
-                ) : (
-                  availableTimeSlots.map((slot) => (
-                    <SelectItem key={slot.id} value={slot.time}>
-                      {slot.time}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+            <Input
+              id="name"
+              placeholder="Seu nome completo"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 w-full">
             <label htmlFor="guests" className="text-sm font-medium">
               Pessoas
             </label>
@@ -174,7 +138,7 @@ export function ReservationForm({ availability, whatsappNumber }: ReservationFor
         <Button type="button" className="w-full" onClick={handleReservation}>
           Confirmar Reserva via WhatsApp
         </Button>
-      </form>
-    </div>
+      </form >
+    </div >
   )
 }

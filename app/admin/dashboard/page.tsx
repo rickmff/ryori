@@ -3,12 +3,11 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { MenuSquare, Calendar, LogOut, Home } from "lucide-react"
+import { LogOut, Home } from "lucide-react"
 import Link from "next/link"
-import MenuEditor from "@/components/admin/menu-editor"
-import AvailabilityEditor from "@/components/admin/availability-editor"
+import AvailabilityEditor from "@/components/admin/AvailabilityEditor"
+import MenuEditor from "@/components/admin/MenuEditor"
 
 export default function AdminDashboardPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -72,44 +71,6 @@ export default function AdminDashboardPage() {
           <p className="text-sm sm:text-base text-muted-foreground">
             Gerencie o menu do restaurante e configure os dias e horários disponíveis para reservas.
           </p>
-        </div>
-
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-8">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle>Menu</CardTitle>
-              <CardDescription>Gerencie os itens do cardápio</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center">
-                  <MenuSquare className="h-8 w-8 text-primary mr-2" />
-                  <div>
-                    <p className="font-medium">Itens no Menu</p>
-                    <p className="text-sm text-muted-foreground">16 itens cadastrados</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle>Disponibilidade</CardTitle>
-              <CardDescription>Configure horários disponíveis</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center">
-                  <Calendar className="h-8 w-8 text-primary mr-2" />
-                  <div>
-                    <p className="font-medium">Horários Configurados</p>
-                    <p className="text-sm text-muted-foreground">7 dias da semana</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         <Tabs defaultValue="menu" className="w-full">

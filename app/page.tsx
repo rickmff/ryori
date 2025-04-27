@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { getMenu, getAvailability } from "@/lib/admin-store"
 import type { MenuItemType } from "@/lib/admin-store"
 import { ReservationForm } from "@/components/ReservationForm"
-import { MobileMenu } from "@/components/MobileMenu"
+import { NavBar } from "@/components/NavBar"
 
 function MenuItem({ item }: { item: MenuItemType }) {
   return (
@@ -38,55 +38,21 @@ export default function RestaurantePage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
-        <div className="container flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-bold">Ryōri</span>
-          </div>
-
-          <nav className="hidden md:flex gap-6">
-            <a href="#inicio" className="text-sm font-medium hover:underline underline-offset-4">
-              Início
-            </a>
-            <a href="#menu" className="text-sm font-medium hover:underline underline-offset-4">
-              Menu
-            </a>
-            <a href="#reservas" className="text-sm font-medium hover:underline underline-offset-4">
-              Reservas
-            </a>
-            <a href="#local" className="text-sm font-medium hover:underline underline-offset-4">
-              Localização
-            </a>
-          </nav>
-
-          <div className="hidden md:block">
-            <Button asChild>
-              <a href="#reservas">Reservar Mesa</a>
-            </Button>
-          </div>
-
-          <div className="md:hidden flex items-center">
-            <MobileMenu />
-          </div>
-        </div>
-      </header>
+      <NavBar />
 
       <main className="flex-1">
         <section id="inicio" className="relative">
-          <div className="relative h-[70vh] w-full overflow-hidden">
+          <div className="relative h-[80vh] w-full overflow-hidden">
             <Image
               src="/ryori-hero.jpg"
               alt="Restaurante Ryōri"
               fill
               sizes="100vw"
-              className="object-cover brightness-[0.7]"
+              className="object-cover brightness-[0.7] blur-sm"
               priority
             />
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4 bg-black/30">
-              <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">Ryōri</h1>
-              <p className="text-xl md:text-2xl text-white max-w-2xl mb-8">
-                Uma experiência gastronômica única com os melhores sabores da culinária contemporânea
-              </p>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4 bg-gradient-to-b from-transparent to-background space-y-20">
+              <h1 className="text-4xl md:text-7xl font-bold text-white">Ryōri</h1>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button size="lg" asChild>
                   <a href="#reservas">Reservar Mesa</a>
@@ -104,12 +70,25 @@ export default function RestaurantePage() {
           </div>
         </section>
 
+        <section id="reservas" className="py-16">
+          <div className="container sm:max-w-2xl max-w-full">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Faça sua Reserva</h2>
+              <p className="text-muted-foreground">
+                Venha viajar connosco pelos sabores da cozinha tradicional Portuguesa e Japonesa reservando uma mesa conosco.
+              </p>
+            </div>
+
+            <ReservationForm availability={availability} whatsappNumber={whatsappNumber} />
+          </div>
+        </section>
+
         <section id="menu" className="py-16 bg-muted/50">
           <div className="container">
             <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Nosso Menu</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Menu</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                Descubra nossa seleção de pratos preparados com ingredientes frescos e técnicas refinadas
+                Enaltecemos a cozinha Portuguesa com os melhores e mais frescos ingredientes em fusão com a alta cozinha Japonesa.
               </p>
             </div>
 
@@ -156,48 +135,6 @@ export default function RestaurantePage() {
           </div>
         </section>
 
-        <section id="reservas" className="py-16">
-          <div className="container">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Faça sua Reserva</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                Reserve sua mesa e garanta uma experiência gastronômica inesquecível
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              <ReservationForm availability={availability} whatsappNumber={whatsappNumber} />
-
-              <div className="flex flex-col justify-start space-y-6 pt-6 md:pt-0">
-                <div className="bg-muted p-6 rounded-lg">
-                  <h3 className="text-xl font-semibold mb-4">Horário de Funcionamento</h3>
-                  <div className="space-y-2">
-                    {availability.length > 0 ? (
-                      availability.map((day) => (
-                        <div key={day.id} className="flex justify-between">
-                          <span>{day.name}</span>
-                          <span>{day.enabled ? `${day.openTime} - ${day.closeTime}` : "Fechado"}</span>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-muted-foreground">Horários indisponíveis.</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="bg-muted p-6 rounded-lg">
-                  <h3 className="text-xl font-semibold mb-4">Informações Importantes</h3>
-                  <ul className="space-y-2 list-disc pl-5 text-muted-foreground">
-                    <li>Reservas podem ser feitas com até 30 dias de antecedência</li>
-                    <li>Para grupos acima de 8 pessoas, entre em contato por telefone</li>
-                    <li>Cancelamentos devem ser feitos com 24h de antecedência</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
         <section id="local" className="py-16 bg-muted/50">
           <div className="container">
             <div className="text-center mb-12">
@@ -209,16 +146,7 @@ export default function RestaurantePage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
               <div className="h-[400px] bg-muted rounded-lg overflow-hidden relative border">
-                <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3888.0000000000005!2d-9.13333!3d38.71667!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xd1931a1aaaaaaab%3A0x1234567890abcdef!2sLisbon%2C%20Portugal!5e0!3m2!1sen!2spt!4v1678886400000!5m2!1sen!2spt"
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  allowFullScreen={false}
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  title="Restaurant Location Map"
-                ></iframe>
+                <Image src="/ryori-front.webp" alt="Restaurante Ryōri" fill className="object-cover brightness-[0.8]" />
               </div>
 
               <div className="flex flex-col justify-center space-y-6">
@@ -227,8 +155,8 @@ export default function RestaurantePage() {
                     <MapPin className="h-5 w-5 mt-1 text-primary flex-shrink-0" />
                     <div>
                       <h3 className="font-medium">Endereço</h3>
-                      <p className="text-muted-foreground">Rua Fictícia, 123</p>
-                      <p className="text-muted-foreground">Lisboa, 1000-001</p>
+                      <p className="text-muted-foreground">PC Marquês de Pombal 2A</p>
+                      <p className="text-muted-foreground">Setúbal, 2900-562</p>
                     </div>
                   </div>
 
@@ -236,7 +164,7 @@ export default function RestaurantePage() {
                     <Phone className="h-5 w-5 mt-1 text-primary flex-shrink-0" />
                     <div>
                       <h3 className="font-medium">Telefone</h3>
-                      <p className="text-muted-foreground">{whatsappNumber}</p>
+                      <p className="text-muted-foreground">+351 968 217 889</p>
                     </div>
                   </div>
 
@@ -258,10 +186,6 @@ export default function RestaurantePage() {
                 </div>
 
                 <div className="pt-4">
-                  <h3 className="font-medium mb-2">Como Chegar</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Próximo à estação de metrô XYZ. Estacionamento disponível na rua.
-                  </p>
                   <Button variant="outline" className="w-full sm:w-auto" asChild>
                     <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer">
                       Ver no Google Maps
@@ -276,21 +200,23 @@ export default function RestaurantePage() {
 
       <footer className="border-t py-8 bg-muted/30">
         <div className="container">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
             <div>
               <h3 className="text-lg font-bold mb-4">Ryōri</h3>
               <p className="text-muted-foreground text-sm">
-                Uma experiência gastronômica única com os melhores sabores da culinária contemporânea.
-              </p>
+                Venha viajar connosco pelos sabores da cozinha tradicional Portuguesa e Japonesa             </p>
             </div>
 
             <div>
               <h3 className="text-lg font-bold mb-4">Contato</h3>
+              <p>+351 968 217 889</p>
+            </div>
+
+            <div>
+              <h3 className="text-md font-bold mb-4">Endereço</h3>
               <div className="space-y-1 text-muted-foreground text-sm">
-                <p>Rua Fictícia, 123 - Lisboa</p>
-                <p>1000-001</p>
-                <p>{whatsappNumber}</p>
-                <p>contato@ryori.pt</p>
+                <p>PC Marquês de Pombal 2A</p>
+                <p>Setúbal, 2900-562</p>
               </div>
             </div>
 

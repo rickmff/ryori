@@ -1,0 +1,668 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Clock, Save, Copy, Info, PlusCircle, XCircle } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Slider } from "@/components/ui/slider"
+
+// Tipos simplificados
+export type TimeRange = {
+  id: string // Unique ID for React key prop
+  open: string
+  close: string
+}
+
+export type DayAvailabilityType = {
+  id: string
+  name: string
+  shortName: string
+  enabled: boolean
+  timeRanges: TimeRange[] // Changed from openTime/closeTime
+  reservationInterval: number // em minutos
+  lastReservationBeforeClose: number // em minutos
+}
+
+// Helper function to convert "HH:MM" to minutes since midnight (More Robust)
+function timeToMinutes(time: string): number {
+  if (!time || typeof time !== 'string' || !time.includes(":")) {
+    // console.warn(`Invalid time input for timeToMinutes: ${time}. Defaulting to 0.`);
+    return 0; // Default for invalid format or type
+  }
+  const parts = time.split(":");
+  if (parts.length !== 2) {
+    // console.warn(`Invalid time format (parts) for timeToMinutes: ${time}. Defaulting to 0.`);
+    return 0;
+  }
+  const hours = parseInt(parts[0], 10);
+  const minutes = parseInt(parts[1], 10);
+
+  // Validate ranges strictly
+  if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+    console.warn(`Invalid time values parsed from ${time} (H:${hours}, M:${minutes}). Defaulting to 0.`);
+    return 0;
+  }
+  return hours * 60 + minutes;
+}
+
+// Helper function to convert minutes since midnight to "HH:MM" (More Robust)
+function minutesToTime(totalMinutes: number): string {
+  // Ensure totalMinutes is a valid number within the expected range
+  if (typeof totalMinutes !== 'number' || isNaN(totalMinutes) || totalMinutes < 0 || totalMinutes > 1439) {
+    console.warn(`Invalid totalMinutes input for minutesToTime: ${totalMinutes}. Defaulting to 00:00.`);
+    totalMinutes = 0; // Default to 00:00 for safety
+  }
+  // Round minutes just in case slider provides non-integer values somehow
+  const roundedMinutes = Math.round(totalMinutes);
+  const hours = Math.floor(roundedMinutes / 60);
+  const minutes = roundedMinutes % 60;
+  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+}
+
+export default function AvailabilityEditor() {
+  const [daysAvailability, setDaysAvailability] = useState<DayAvailabilityType[]>([])
+  const [activeDay, setActiveDay] = useState<string>("1") // ID do dia ativo
+  const [successMessage, setSuccessMessage] = useState("")
+  const [previewTimeSlots, setPreviewTimeSlots] = useState<string[]>([])
+
+  // Carregar dados do localStorage ao iniciar
+  useEffect(() => {
+    const savedAvailability = localStorage.getItem("restaurantAvailability")
+    if (savedAvailability) {
+      try {
+        const parsed = JSON.parse(savedAvailability)
+        // Basic check for the new format (presence of timeRanges array)
+        if (parsed.length > 0 && Array.isArray(parsed[0].timeRanges)) {
+          // Ensure each timeRange has a unique ID if loaded from older storage
+          const validatedData = parsed.map((day: DayAvailabilityType) => ({
+            ...day,
+            timeRanges: day.timeRanges.map((range, index) => ({
+              ...range,
+              id: range.id || `range-${Date.now()}-${index}`, // Add ID if missing
+            })),
+          }))
+          setDaysAvailability(validatedData)
+        } else {
+          // Attempt conversion or load initial if conversion is too complex/unreliable
+          console.warn("Formato de disponibilidade antigo detectado ou inválido. Carregando dados iniciais.")
+          const initialData = getInitialAvailability()
+          setDaysAvailability(initialData)
+          localStorage.setItem("restaurantAvailability", JSON.stringify(initialData))
+        }
+      } catch (e) {
+        console.error("Erro ao carregar dados de disponibilidade:", e)
+        setDaysAvailability(getInitialAvailability())
+      }
+    } else {
+      // Carregar dados iniciais de disponibilidade
+      const initialData = getInitialAvailability()
+      setDaysAvailability(initialData)
+      localStorage.setItem("restaurantAvailability", JSON.stringify(initialData))
+    }
+  }, [])
+
+  // Atualizar preview de horários quando o dia ativo mudar
+  useEffect(() => {
+    const currentDay = daysAvailability.find((day) => day.id === activeDay)
+    if (currentDay && currentDay.enabled) {
+      setPreviewTimeSlots(generateTimeSlots(currentDay))
+    } else {
+      setPreviewTimeSlots([])
+    }
+  }, [daysAvailability, activeDay])
+
+  // Salvar no localStorage quando os dados mudarem
+  useEffect(() => {
+    if (daysAvailability.length > 0) {
+      localStorage.setItem("restaurantAvailability", JSON.stringify(daysAvailability))
+    }
+  }, [daysAvailability])
+
+  // Obter o dia ativo
+  const currentDay = daysAvailability.find((day) => day.id === activeDay) || daysAvailability[0]
+
+  // Gerar horários disponíveis com base nas configurações
+  function generateTimeSlots(day: DayAvailabilityType): string[] {
+    if (!day.enabled || day.timeRanges.length === 0) return []
+
+    const allSlots: string[] = []
+
+    day.timeRanges.forEach((range) => {
+      if (!range.open || !range.close) return // Skip incomplete ranges
+
+      // Converter horários para minutos desde meia-noite
+      const [openHour, openMinute] = range.open.split(":").map(Number)
+      const [closeHour, closeMinute] = range.close.split(":").map(Number)
+
+      let currentTimeInMinutes = openHour * 60 + openMinute
+      const closeTimeInMinutes = closeHour * 60 + closeMinute
+
+      // Ajustar para o caso de fechamento após meia-noite
+      const adjustedCloseTime = closeTimeInMinutes <= currentTimeInMinutes ? closeTimeInMinutes + 24 * 60 : closeTimeInMinutes
+
+      // Calcular o horário da última reserva possível PARA ESTE INTERVALO
+      const lastReservationTime = adjustedCloseTime - day.lastReservationBeforeClose
+
+      // Gerar horários em intervalos regulares DENTRO DESTE INTERVALO
+      while (currentTimeInMinutes <= lastReservationTime) {
+        const hour = Math.floor(currentTimeInMinutes / 60) % 24
+        const minute = currentTimeInMinutes % 60
+        allSlots.push(`${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`)
+        currentTimeInMinutes += day.reservationInterval
+      }
+    })
+
+    // Ordenar e remover duplicados (embora duplicados sejam improváveis com esta lógica)
+    const uniqueSortedSlots = [...new Set(allSlots)].sort()
+    return uniqueSortedSlots
+  }
+
+  // Manipuladores de eventos
+  const handleToggleDayEnabled = (enabled: boolean) => {
+    setDaysAvailability(daysAvailability.map((day) => (day.id === activeDay ? { ...day, enabled } : day)))
+    showSuccessMessage(`${enabled ? "Ativado" : "Desativado"} com sucesso!`)
+  }
+
+  // ATUALIZADO: Adicionar um novo intervalo com horários default
+  const handleAddTimeRange = () => {
+    setDaysAvailability(
+      daysAvailability.map((day) =>
+        day.id === activeDay
+          ? {
+            ...day,
+            // Add new range with default times suitable for sliders
+            timeRanges: [...day.timeRanges, { id: `range-${Date.now()}`, open: "09:00", close: "17:00" }],
+          }
+          : day,
+      ),
+    )
+  }
+
+  // NOVO: Remover um intervalo de tempo pelo seu ID
+  const handleRemoveTimeRange = (rangeIdToRemove: string) => {
+    setDaysAvailability(
+      daysAvailability.map((day) =>
+        day.id === activeDay
+          ? {
+            ...day,
+            timeRanges: day.timeRanges.filter((range) => range.id !== rangeIdToRemove),
+          }
+          : day,
+      ),
+    )
+  }
+
+  // ATUALIZADO: Handler do Slider com mais validação e logs
+  const handleUpdateTimeRangeSlider = (rangeId: string, values: number[]) => {
+    // console.log(`Slider change for range ${rangeId}: Received values [${values?.join(', ')}]`); // Log received values
+
+    // Validate incoming values array
+    if (!Array.isArray(values) || values.length !== 2 || typeof values[0] !== 'number' || typeof values[1] !== 'number') {
+      console.error(`Invalid values array received from slider for range ${rangeId}:`, values);
+      return; // Exit if values are not as expected
+    }
+
+    // Ensure values are within bounds (slider props should handle this, but good practice)
+    // Use Math.round as slider values might not be perfectly aligned with step sometimes
+    let safeOpenMinutes = Math.round(Math.max(0, Math.min(1439, values[0])));
+    let safeCloseMinutes = Math.round(Math.max(0, Math.min(1439, values[1])));
+
+    // Ensure open is strictly less than close, respecting the minimum step if possible
+    // This helps prevent the handles from crossing or becoming equal if minStepsBetweenThumbs fails
+    const minStep = 15; // Assuming step is 15
+    if (safeOpenMinutes >= safeCloseMinutes) {
+      // If they overlap or cross, force close time to be at least one step after open time
+      safeCloseMinutes = Math.min(1439, safeOpenMinutes + minStep);
+      // Optionally, adjust open time if close time hits the max boundary
+      if (safeCloseMinutes === 1439) {
+        safeOpenMinutes = Math.max(0, 1439 - minStep);
+      }
+      console.warn(`Adjusted slider values for range ${rangeId} due to overlap: Open=${safeOpenMinutes}, Close=${safeCloseMinutes}`);
+    }
+
+
+    const newOpenTime = minutesToTime(safeOpenMinutes);
+    const newCloseTime = minutesToTime(safeCloseMinutes);
+
+    // console.log(`Updating range ${rangeId} to Open: ${newOpenTime} (${safeOpenMinutes}m), Close: ${newCloseTime} (${safeCloseMinutes}m)`); // Log converted times
+
+    // Use functional update for setting state based on previous state
+    setDaysAvailability((currentAvailability) =>
+      currentAvailability.map((day) =>
+        day.id === activeDay
+          ? {
+            ...day,
+            timeRanges: day.timeRanges.map((range) =>
+              range.id === rangeId
+                ? { ...range, open: newOpenTime, close: newCloseTime }
+                : range
+            ),
+          }
+          : day
+      )
+    );
+  };
+
+  // Keep the original handleUpdateTimeRange for potential other uses
+  const handleUpdateTimeRange = (rangeId: string, field: "open" | "close", value: string) => {
+    // Basic validation for direct input if ever used
+    const minutes = timeToMinutes(value);
+    const validatedTime = minutesToTime(minutes); // Ensure it's a valid HH:MM
+
+    setDaysAvailability(
+      daysAvailability.map((day) =>
+        day.id === activeDay
+          ? {
+            ...day,
+            timeRanges: day.timeRanges.map((range) =>
+              range.id === rangeId ? { ...range, [field]: validatedTime } : range
+            ),
+          }
+          : day
+      )
+    );
+  };
+
+  const handleUpdateReservationInterval = (interval: number) => {
+    setDaysAvailability(
+      daysAvailability.map((day) => (day.id === activeDay ? { ...day, reservationInterval: interval } : day)),
+    )
+  }
+
+  const handleUpdateLastReservationTime = (minutes: number) => {
+    setDaysAvailability(
+      daysAvailability.map((day) => (day.id === activeDay ? { ...day, lastReservationBeforeClose: minutes } : day)),
+    )
+  }
+
+  const handleCopyToAllDays = () => {
+    if (!currentDay) return
+
+    // Copia os timeRanges e as configurações de intervalo/última reserva
+    const { timeRanges, reservationInterval, lastReservationBeforeClose } = currentDay
+
+    setDaysAvailability(
+      daysAvailability.map((day) =>
+        day.id !== activeDay
+          ? {
+            ...day,
+            // Gera novos IDs para os timeRanges copiados para evitar conflitos de key
+            timeRanges: timeRanges.map((range) => ({ ...range, id: `range-${Date.now()}-${Math.random()}` })),
+            reservationInterval,
+            lastReservationBeforeClose,
+            // Mantém o estado 'enabled' original do dia de destino
+            // enabled: day.enabled
+          }
+          : day,
+      ),
+    )
+
+    showSuccessMessage("Configurações copiadas para todos os dias!")
+  }
+
+  const handleSaveChanges = () => {
+    localStorage.setItem("restaurantAvailability", JSON.stringify(daysAvailability))
+    showSuccessMessage("Todas as alterações foram salvas com sucesso!")
+  }
+
+  const showSuccessMessage = (message: string) => {
+    setSuccessMessage(message)
+    setTimeout(() => {
+      setSuccessMessage("")
+    }, 3000)
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h2 className="text-2xl font-bold">Gerenciamento de Disponibilidade</h2>
+        <Button onClick={handleSaveChanges}>
+          <Save className="h-4 w-4 mr-2" />
+          Salvar Alterações
+        </Button>
+      </div>
+
+      {successMessage && (
+        <Alert className="bg-green-50 border-green-200">
+          <AlertDescription className="text-green-600">{successMessage}</AlertDescription>
+        </Alert>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <div className="lg:col-span-2 space-y-6">
+          <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+            {daysAvailability.map((day) => (
+              <Button
+                key={day.id}
+                variant={activeDay === day.id ? "default" : "outline"}
+                className={`h-auto py-3 ${!day.enabled ? "opacity-50" : ""}`}
+                onClick={() => setActiveDay(day.id)}
+              >
+                <div className="flex flex-col items-center">
+                  <span className="text-sm font-medium">{day.shortName}</span>
+                  <span className="text-xs text-muted-foreground">{day.name.substring(0, 3)}</span>
+                </div>
+              </Button>
+            ))}
+          </div>
+
+          {currentDay && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-lg font-medium">
+                  Configurar {currentDay.name} ({currentDay.shortName})
+                </CardTitle>
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor={`enabled-${currentDay.id}`} className="text-sm">
+                    {currentDay.enabled ? "Aberto" : "Fechado"}
+                  </Label>
+                  <Switch
+                    id={`enabled-${currentDay.id}`}
+                    checked={currentDay.enabled}
+                    onCheckedChange={handleToggleDayEnabled}
+                    aria-label={`Ativar/Desativar ${currentDay.name}`}
+                  />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6 pt-4">
+                {currentDay.enabled ? (
+                  <>
+                    <div className="space-y-4">
+                      <Label className="text-base font-medium">Horários de Funcionamento</Label>
+                      {currentDay.timeRanges.length === 0 && (
+                        <p className="text-sm text-muted-foreground">Nenhum horário definido. Adicione um intervalo.</p>
+                      )}
+                      {/* Group time ranges into pairs for row layout */}
+                      {Array.from({ length: Math.ceil(currentDay.timeRanges.length / 2) }).map((_, rowIndex) => {
+                        const range1Index = rowIndex * 2;
+                        const range2Index = range1Index + 1;
+                        const range1 = currentDay.timeRanges[range1Index];
+                        const range2 = currentDay.timeRanges[range2Index]; // Might be undefined
+
+                        // Helper function to render a single interval block
+                        const renderInterval = (range: TimeRange | undefined, index: number) => {
+                          if (!range) return <div className="flex-1"></div>; // Placeholder for alignment
+
+                          const openMinutes = timeToMinutes(range.open);
+                          let closeMinutes = timeToMinutes(range.close);
+                          const minStep = 15;
+                          // Adjust initial close minutes for slider display if needed
+                          let initialCloseMinutes = closeMinutes;
+                          if (initialCloseMinutes <= openMinutes) {
+                            initialCloseMinutes = Math.min(1439, openMinutes + minStep);
+                          }
+                          const sliderValue = [openMinutes, initialCloseMinutes];
+
+                          return (
+                            <div key={range.id} className="flex-1 flex flex-col gap-3 p-4 border rounded-md bg-muted/30 min-w-[250px]"> {/* Added flex-1 and min-w */}
+                              <div className="flex justify-between items-center">
+                                <Label className="text-sm font-medium">Intervalo {index + 1}</Label>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleRemoveTimeRange(range.id)}
+                                  aria-label="Remover intervalo"
+                                  className="text-destructive hover:bg-destructive/10 h-7 w-7"
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center text-lg font-mono px-1">
+                                  <span className="px-2 py-0.5 rounded bg-background">
+                                    {range.open || "00:00"}
+                                  </span>
+                                  <span className="px-2 py-0.5 rounded bg-background">
+                                    {range.close || "00:00"}
+                                  </span>
+                                </div>
+                                <Slider
+                                  key={`slider-${range.id}`}
+                                  id={`range-slider-${range.id}`}
+                                  min={0}
+                                  max={1439}
+                                  step={minStep}
+                                  value={sliderValue}
+                                  onValueChange={(values) => handleUpdateTimeRangeSlider(range.id, values)}
+                                  minStepsBetweenThumbs={1}
+                                  className="py-2"
+                                />
+                              </div>
+                            </div>
+                          );
+                        };
+
+                        return (
+                          <div key={`interval-row-${rowIndex}`} className="flex flex-col sm:flex-row gap-4 w-full"> {/* Row container */}
+                            {renderInterval(range1, range1Index)}
+                            {/* Render second interval or a placeholder if it exists */}
+                            {currentDay.timeRanges.length > range1Index + 1
+                              ? renderInterval(range2, range2Index)
+                              : <div className="flex-1 min-w-[250px]"></div> /* Placeholder for alignment */
+                            }
+                          </div>
+                        );
+                      })}
+
+                      <Button variant="outline" size="sm" onClick={handleAddTimeRange}>
+                        <PlusCircle className="h-4 w-4 mr-2" />
+                        Adicionar Horário
+                      </Button>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <div className="space-y-2 w-full">
+                        <Label htmlFor="interval" className="text-base font-medium">Intervalo entre Reservas</Label>
+                        <Select
+                          value={currentDay.reservationInterval.toString()}
+                          onValueChange={(value) => handleUpdateReservationInterval(parseInt(value))}
+                        >
+                          <SelectTrigger id="interval">
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="15">15 minutos</SelectItem>
+                            <SelectItem value="30">30 minutos</SelectItem>
+                            <SelectItem value="45">45 minutos</SelectItem>
+                            <SelectItem value="60">1 hora</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2 w-full">
+                        <Label htmlFor="last-reservation" className="text-base font-medium">Última Reserva Antes do Fechamento</Label>
+                        <Select
+                          value={currentDay.lastReservationBeforeClose.toString()}
+                          onValueChange={(value) => handleUpdateLastReservationTime(parseInt(value))}
+                        >
+                          <SelectTrigger id="last-reservation">
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">No horário de fechamento</SelectItem>
+                            <SelectItem value="15">15 minutos antes</SelectItem>
+                            <SelectItem value="30">30 minutos antes</SelectItem>
+                            <SelectItem value="45">45 minutos antes</SelectItem>
+                            <SelectItem value="60">1 hora antes</SelectItem>
+                            <SelectItem value="90">1 hora e 30 minutos antes</SelectItem>
+                            <SelectItem value="120">2 horas antes</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t">
+                      <TooltipProvider>
+                        <Tooltip delayDuration={100}>
+                          <TooltipTrigger asChild>
+                            <Button variant="outline" size="sm" onClick={handleCopyToAllDays}>
+                              <Copy className="h-4 w-4 mr-2" />
+                              Copiar para Todos os Dias
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Copia os horários, intervalo e última reserva <br /> deste dia para todos os outros dias.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+
+                    <Alert>
+                      <Info className="h-4 w-4" />
+                      <AlertDescription>
+                        A visualização ao lado mostra os horários disponíveis para reserva com base nestas configurações.
+                      </AlertDescription>
+                    </Alert>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    {currentDay.name} está definido como fechado. Ative para configurar os horários.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        <div className="lg:col-span-1 space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg font-medium">Visualização ({currentDay?.shortName})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {currentDay && currentDay.enabled ? (
+                <div className="space-y-4">
+                  {currentDay.timeRanges.length > 0 ? (
+                    currentDay.timeRanges.map((range, index) => (
+                      <div key={`preview-${range.id}`} className="flex items-start gap-4 text-sm">
+                        <Clock className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                        <div className="flex-grow">
+                          <p>
+                            <span className="font-medium">Aberto:</span> {range.open} - <span className="font-medium">Fecha:</span> {range.close}
+                          </p>
+                          {index === 0 && (
+                            <>
+                              <p className="text-xs text-muted-foreground">
+                                Intervalo: {currentDay.reservationInterval} min
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Última reserva: {currentDay.lastReservationBeforeClose} min antes de fechar
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Nenhum intervalo de funcionamento definido.</p>
+                  )}
+
+                  <div className="pt-4 border-t">
+                    <p className="text-sm font-medium mb-2">Horários disponíveis para reserva:</p>
+                    {previewTimeSlots.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {previewTimeSlots.map((slot) => (
+                          <Badge key={slot} variant="secondary" className="font-mono text-lg font-normal">
+                            {slot}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        {currentDay.timeRanges.length > 0 ? "Nenhum horário gerado com as configurações atuais." : "Defina um intervalo de funcionamento."}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Dia fechado. Nenhum horário disponível.</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+      </div>
+    </div>
+  )
+}
+
+// Dados iniciais de disponibilidade (ATUALIZADO)
+function getInitialAvailability(): DayAvailabilityType[] {
+  const defaultInterval = 60
+  const defaultLastReservation = 120
+  const createRange = (open: string, close: string): TimeRange => ({ id: `range-${Date.now()}-${Math.random()}`, open, close })
+
+  return [
+    {
+      id: "1",
+      name: "Segunda-feira",
+      shortName: "Seg",
+      enabled: false,
+      timeRanges: [],
+      reservationInterval: defaultInterval,
+      lastReservationBeforeClose: defaultLastReservation,
+    },
+    {
+      id: "2",
+      name: "Terça-feira",
+      shortName: "Ter",
+      enabled: true,
+      timeRanges: [createRange("12:00", "15:30"), createRange("19:00", "23:00")],
+      reservationInterval: defaultInterval,
+      lastReservationBeforeClose: defaultLastReservation,
+    },
+    {
+      id: "3",
+      name: "Quarta-feira",
+      shortName: "Qua",
+      enabled: true,
+      timeRanges: [createRange("12:00", "15:30"), createRange("19:00", "23:00")],
+      reservationInterval: defaultInterval,
+      lastReservationBeforeClose: defaultLastReservation,
+    },
+    {
+      id: "4",
+      name: "Quinta-feira",
+      shortName: "Qui",
+      enabled: true,
+      timeRanges: [createRange("12:00", "15:30"), createRange("19:00", "23:00")],
+      reservationInterval: defaultInterval,
+      lastReservationBeforeClose: defaultLastReservation,
+    },
+    {
+      id: "5",
+      name: "Sexta-feira",
+      shortName: "Sex",
+      enabled: true,
+      timeRanges: [createRange("12:00", "15:30"), createRange("19:00", "23:00")],
+      reservationInterval: defaultInterval,
+      lastReservationBeforeClose: defaultLastReservation,
+    },
+    {
+      id: "6",
+      name: "Sábado",
+      shortName: "Sáb",
+      enabled: true,
+      timeRanges: [createRange("12:00", "15:30"), createRange("19:00", "23:00")],
+      reservationInterval: defaultInterval,
+      lastReservationBeforeClose: defaultLastReservation,
+    },
+    {
+      id: "7",
+      name: "Domingo",
+      shortName: "Dom",
+      enabled: false,
+      timeRanges: [],
+      reservationInterval: defaultInterval,
+      lastReservationBeforeClose: defaultLastReservation,
+    },
+  ]
+}
