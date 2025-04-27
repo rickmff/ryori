@@ -1,84 +1,52 @@
-"use client"
+// This page must now be a Server Component to perform server-side verification
+// 'use client'; // REMOVE this line if present
 
-import type React from "react"
+import { cookies } from 'next/headers'; // Import cookies from next/headers
+import { redirect } from 'next/navigation'; // Import redirect
+import { verifySessionCookie } from '@/lib/serverAuth'; // Correct: Import the shared helper
+// import { getCookie } from 'cookies-next'; // Reverting this
+// import { useAuth } from '@/app/context/AuthContext'; // Cannot use client hooks directly
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Lock } from "lucide-react"
+const SESSION_COOKIE_NAME = '__session';
 
-export default function AdminLoginPage() {
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
-  const router = useRouter()
+// Make the component async
+export default async function AdminPage() {
+  // 1. Verify Authentication Server-Side
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
+  const decodedToken = await verifySessionCookie(sessionCookie?.value);
 
-  // Senha simples para demonstração - em produção, use um sistema de autenticação adequado
-  const ADMIN_PASSWORD = "admin123"
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
-
-    // Simulando um delay de autenticação
-    setTimeout(() => {
-      if (password === ADMIN_PASSWORD) {
-        // Em produção, use um sistema de autenticação adequado com tokens JWT ou similar
-        localStorage.setItem("adminAuthenticated", "true")
-        router.push("/admin/dashboard")
-      } else {
-        setError("Senha incorreta. Tente novamente.")
-      }
-      setLoading(false)
-    }, 1000)
+  if (!decodedToken) {
+    // Redirect to login if not authenticated. This happens server-side.
+    redirect('/admin/login');
   }
 
+  // 2. If authenticated, render the page content
+  // You can fetch server-side data here if needed
+  const userEmail = decodedToken.email || 'No email provided';
+
+  console.log(`AdminPage: Rendering for verified user ${userEmail}`);
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4 py-8">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-xl sm:text-2xl font-bold text-center">Área Administrativa</CardTitle>
-          <CardDescription className="text-center">
-            Acesse o painel administrativo do Restaurante Ryōri
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {error && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 mx-auto mb-4">
-                <Lock className="h-6 w-6 text-primary" />
-              </div>
-              <div className="space-y-1">
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Digite a senha de administrador"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Autenticando..." : "Acessar Painel"}
-            </Button>
-          </form>
-        </CardContent>
-        <CardFooter>
-          <p className="text-sm text-muted-foreground text-center w-full">
-            Esta é uma área restrita apenas para administradores do restaurante.
-          </p>
-        </CardFooter>
-      </Card>
+    <div className="p-6">
+      {/* Standard page header or layout elements can go here */}
+      <header className="mb-6">
+        <h1 className="text-2xl font-bold">Admin Area</h1>
+        <p className="text-sm text-muted-foreground">Welcome, {userEmail}</p>
+      </header>
+
+      <section>
+        {/*
+          Main content for the /admin page.
+          - Fetch data server-side and display it.
+          - Or, import and render Client Components for interactive sections.
+          Example:
+          <SomeClientComponent initialData={serverFetchedData} />
+        */}
+        <p>This is the main admin landing page.</p>
+        {/* Add more content or client component placeholders below */}
+      </section>
     </div>
-  )
+  );
 }
+

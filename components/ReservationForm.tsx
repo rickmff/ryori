@@ -65,79 +65,80 @@ export function ReservationForm({ availability, whatsappNumber }: ReservationFor
           <Calendar mode="single" selected={date} onSelect={setDate} />
         </div>
 
-        <div className="space-y-2 sm:col-span-2">
-          <label className="text-sm font-medium">
-            Horário
-          </label>
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-            {!selectedDay || !selectedDay.enabled ? (
-              <p className="text-sm text-muted-foreground col-span-full">Dia indisponível</p>
-            ) : availableTimeSlots.length === 0 ? (
-              <p className="text-sm text-muted-foreground col-span-full">Sem horários disponíveis</p>
-            ) : (
-              availableTimeSlots.map((slot) => (
-                <Button
-                  key={slot.id}
-                  variant={selectedTime === slot.time ? "default" : "outline"}
-                  onClick={() => setSelectedTime(slot.time)}
-                  type="button"
-                  className="w-full justify-center"
-                >
-                  {slot.time}
-                </Button>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="space-y-2 w-full">
-            <label htmlFor="name" className="text-sm font-medium">
-              Nome
+        <div className="p-2 space-y-4 ">
+          <div className="space-y-2 sm:col-span-2 ">
+            <label className="text-sm font-medium">
+              Horário
             </label>
-            <Input
-              id="name"
-              placeholder="Seu nome"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              {!selectedDay || !selectedDay.enabled ? (
+                <p className="text-sm text-muted-foreground col-span-full">Dia indisponível</p>
+              ) : availableTimeSlots.length === 0 ? (
+                <p className="text-sm text-muted-foreground col-span-full">Sem horários disponíveis</p>
+              ) : (
+                availableTimeSlots.map((slot) => (
+                  <Button
+                    key={slot.id}
+                    variant={selectedTime === slot.time ? "default" : "outline"}
+                    onClick={() => setSelectedTime(slot.time)}
+                    type="button"
+                    className="w-full justify-center"
+                  >
+                    {slot.time}
+                  </Button>
+                ))
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="space-y-2 w-full">
+              <label htmlFor="name" className="text-sm font-medium">
+                Nome
+              </label>
+              <Input
+                id="name"
+                placeholder="Seu nome"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2 w-full">
+              <label htmlFor="guests" className="text-sm font-medium">
+                Pessoas
+              </label>
+              <Select value={guests} onValueChange={setGuests} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...Array(8)].map((_, i) => (
+                    <SelectItem key={i + 1} value={(i + 1).toString()}>
+                      {i + 1} pessoa{i > 0 ? "s" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="notes" className="text-sm font-medium">
+              Observações especiais
+            </label>
+            <Textarea
+              id="notes"
+              placeholder="Alergias, preferências, ocasiões especiais, etc."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
             />
           </div>
 
-          <div className="space-y-2 w-full">
-            <label htmlFor="guests" className="text-sm font-medium">
-              Pessoas
-            </label>
-            <Select value={guests} onValueChange={setGuests} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                {[...Array(8)].map((_, i) => (
-                  <SelectItem key={i + 1} value={(i + 1).toString()}>
-                    {i + 1} pessoa{i > 0 ? "s" : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="notes" className="text-sm font-medium">
-            Observações especiais
-          </label>
-          <Textarea
-            id="notes"
-            placeholder="Alergias, preferências, ocasiões especiais, etc."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-        </div>
-
-        <Button type="button" className="w-full" onClick={handleReservation}>
-          Confirmar Reserva via WhatsApp
-        </Button>
+          <Button type="button" className="w-full" onClick={handleReservation}>
+            Confirmar Reserva via WhatsApp
+          </Button>
+        </div >
       </form >
     </div >
   )
