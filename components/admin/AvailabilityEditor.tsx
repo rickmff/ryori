@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,6 +11,10 @@ import { Clock, Save, Copy, Info, PlusCircle, XCircle } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
+
+// Import Firestore functions and the initialized instance
+import { firestore } from "@/lib/firebase" // Assuming your firebase setup is in lib/firebase.ts
+import { doc, getDoc, setDoc } from "firebase/firestore"
 
 // Tipos simplificados
 export type TimeRange = {
@@ -67,46 +70,109 @@ function minutesToTime(totalMinutes: number): string {
 }
 
 export default function AvailabilityEditor() {
+  // Define ALL_WEEK_DAYS INSIDE the component
+  const ALL_WEEK_DAYS = [
+    { id: "1", name: "Segunda-feira", shortName: "Seg" },
+    { id: "2", name: "Terça-feira", shortName: "Ter" },
+    { id: "3", name: "Quarta-feira", shortName: "Qua" },
+    { id: "4", name: "Quinta-feira", shortName: "Qui" },
+    { id: "5", name: "Sexta-feira", shortName: "Sex" },
+    { id: "6", name: "Sábado", shortName: "Sáb" },
+    { id: "7", name: "Domingo", shortName: "Dom" },
+  ];
+
   const [daysAvailability, setDaysAvailability] = useState<DayAvailabilityType[]>([])
+  // State to store the initially loaded data for comparison
+  const [initialDaysAvailability, setInitialDaysAvailability] = useState<DayAvailabilityType[]>([])
+  // State to track if there are unsaved changes
+  const [isDirty, setIsDirty] = useState(false);
+
   const [activeDay, setActiveDay] = useState<string>("1") // ID do dia ativo
   const [successMessage, setSuccessMessage] = useState("")
   const [previewTimeSlots, setPreviewTimeSlots] = useState<string[]>([])
+  const [isLoading, setIsLoading] = useState(true); // Add loading state
+  const [error, setError] = useState<string | null>(null); // Add error state
 
-  // Carregar dados do localStorage ao iniciar
+  // Define Firestore document reference
+  const availabilityDocRef = firestore ? doc(firestore, "availability", "restaurant") : null;
+
+  // Carregar dados do Firestore ao iniciar
   useEffect(() => {
-    const savedAvailability = localStorage.getItem("restaurantAvailability")
-    if (savedAvailability) {
+    const loadAvailability = async () => {
+      if (!firestore || !availabilityDocRef) {
+        console.warn("Firestore not initialized yet.");
+        // Optionally set initial data here if Firestore might take time
+        // setDaysAvailability(getInitialAvailability());
+        setIsLoading(false); // Stop loading even if firestore isn't ready
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
       try {
-        const parsed = JSON.parse(savedAvailability)
-        // Basic check for the new format (presence of timeRanges array)
-        if (parsed.length > 0 && Array.isArray(parsed[0].timeRanges)) {
-          // Ensure each timeRange has a unique ID if loaded from older storage
-          const validatedData = parsed.map((day: DayAvailabilityType) => ({
-            ...day,
-            timeRanges: day.timeRanges.map((range, index) => ({
-              ...range,
-              id: range.id || `range-${Date.now()}-${index}`, // Add ID if missing
-            })),
-          }))
-          setDaysAvailability(validatedData)
+        const docSnap = await getDoc(availabilityDocRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          // Validate data structure - basic check
+          if (data && Array.isArray(data.days)) { // Simpler check: just need the days array
+            // Ensure each timeRange has a unique ID
+            const validatedData = data.days.map((day: DayAvailabilityType) => ({
+              ...day,
+              timeRanges: day.timeRanges.map((range, index) => ({
+                ...range,
+                id: range.id || `range-${Date.now()}-${index}`, // Add ID if missing
+              })),
+            }))
+            setDaysAvailability(validatedData);
+            // Store the loaded data as the initial state
+            setInitialDaysAvailability(JSON.parse(JSON.stringify(validatedData))); // Deep copy
+            setIsDirty(false); // Reset dirty state on successful load
+          } else {
+            console.warn("Dados de disponibilidade do Firestore estão em formato inesperado ou vazios.");
+            setDaysAvailability([]);
+            setInitialDaysAvailability([]); // Reset initial state
+            setIsDirty(false);
+          }
         } else {
-          // Attempt conversion or load initial if conversion is too complex/unreliable
-          console.warn("Formato de disponibilidade antigo detectado ou inválido. Carregando dados iniciais.")
-          const initialData = getInitialAvailability()
-          setDaysAvailability(initialData)
-          localStorage.setItem("restaurantAvailability", JSON.stringify(initialData))
+          console.log("Nenhum documento de disponibilidade encontrado no Firestore. A configuração precisa ser salva.");
+          // Don't load initial data, just start empty
+          setDaysAvailability([]);
+          setInitialDaysAvailability([]); // Reset initial state
+          // Mark as dirty if starting empty, so the first save is possible
+          setIsDirty(true); // Set dirty true if creating from scratch
+          // Optionally set a message indicating setup is needed?
+          // Save the initial data to Firestore for the first time
+          await setDoc(availabilityDocRef, { days: [] });
+          showSuccessMessage("Configuração inicial de disponibilidade salva.");
         }
       } catch (e) {
-        console.error("Erro ao carregar dados de disponibilidade:", e)
-        setDaysAvailability(getInitialAvailability())
+        console.error("Erro ao carregar dados de disponibilidade do Firestore:", e);
+        setError("Falha ao carregar configurações. Tente recarregar.");
+        setDaysAvailability([]); // Set to empty array on error
+        setInitialDaysAvailability([]); // Reset initial state
+        setIsDirty(false);
+      } finally {
+        setIsLoading(false);
       }
-    } else {
-      // Carregar dados iniciais de disponibilidade
-      const initialData = getInitialAvailability()
-      setDaysAvailability(initialData)
-      localStorage.setItem("restaurantAvailability", JSON.stringify(initialData))
+    };
+
+    loadAvailability();
+    // Dependency array includes firestore to re-run if it becomes available later
+    // Note: availabilityDocRef depends on firestore, so only firestore is needed here conceptually
+  }, [firestore]); // Re-run when firestore instance becomes available
+
+  // Effect to check if current state differs from initial state
+  useEffect(() => {
+    // Simple comparison using JSON stringify
+    // Avoid comparing if initial state is still empty during setup
+    if (initialDaysAvailability.length > 0 || daysAvailability.length > 0) {
+      const currentStateString = JSON.stringify(daysAvailability.sort((a, b) => parseInt(a.id) - parseInt(b.id)));
+      const initialStateString = JSON.stringify(initialDaysAvailability.sort((a, b) => parseInt(a.id) - parseInt(b.id)));
+      setIsDirty(currentStateString !== initialStateString);
     }
-  }, [])
+    // Add initialDaysAvailability to dependency array
+  }, [daysAvailability, initialDaysAvailability]);
 
   // Atualizar preview de horários quando o dia ativo mudar
   useEffect(() => {
@@ -117,13 +183,6 @@ export default function AvailabilityEditor() {
       setPreviewTimeSlots([])
     }
   }, [daysAvailability, activeDay])
-
-  // Salvar no localStorage quando os dados mudarem
-  useEffect(() => {
-    if (daysAvailability.length > 0) {
-      localStorage.setItem("restaurantAvailability", JSON.stringify(daysAvailability))
-    }
-  }, [daysAvailability])
 
   // Obter o dia ativo
   const currentDay = daysAvailability.find((day) => day.id === activeDay) || daysAvailability[0]
@@ -167,7 +226,6 @@ export default function AvailabilityEditor() {
   // Manipuladores de eventos
   const handleToggleDayEnabled = (enabled: boolean) => {
     setDaysAvailability(daysAvailability.map((day) => (day.id === activeDay ? { ...day, enabled } : day)))
-    showSuccessMessage(`${enabled ? "Ativado" : "Desativado"} com sucesso!`)
   }
 
   // ATUALIZADO: Adicionar um novo intervalo com horários default
@@ -283,57 +341,154 @@ export default function AvailabilityEditor() {
   }
 
   const handleCopyToAllDays = () => {
+    // Button is now disabled if currentDay is null, but check again for safety
     if (!currentDay) return
 
-    // Copia os timeRanges e as configurações de intervalo/última reserva
-    const { timeRanges, reservationInterval, lastReservationBeforeClose } = currentDay
+    // Get settings from the current day
+    const { timeRanges, reservationInterval, lastReservationBeforeClose, enabled: sourceEnabled } = currentDay
 
-    setDaysAvailability(
-      daysAvailability.map((day) =>
-        day.id !== activeDay
-          ? {
-            ...day,
-            // Gera novos IDs para os timeRanges copiados para evitar conflitos de key
-            timeRanges: timeRanges.map((range) => ({ ...range, id: `range-${Date.now()}-${Math.random()}` })),
-            reservationInterval,
-            lastReservationBeforeClose,
-            // Mantém o estado 'enabled' original do dia de destino
-            // enabled: day.enabled
-          }
-          : day,
-      ),
-    )
+    // Use functional update for setDaysAvailability
+    setDaysAvailability(currentAvailability => {
+      // Map over ALL_WEEK_DAYS to ensure we process every potential day
+      // Add explicit return type DayAvailabilityType for the map function
+      const updatedAvailability = ALL_WEEK_DAYS.map((dayTemplate: { id: string; name: string; shortName: string }): DayAvailabilityType => {
+        // Find existing data for this dayTemplate in the *current* state
+        const existingDay = currentAvailability.find(d => d.id === dayTemplate.id);
 
-    showSuccessMessage("Configurações copiadas para todos os dias!")
+        // Check if it's the active day (source day)
+        if (dayTemplate.id === activeDay) {
+          // Return the source day (which must exist if we passed the initial check)
+          return currentDay;
+        }
+
+        // Settings to copy
+        const copiedSettings = {
+          timeRanges: timeRanges.map((range) => ({ ...range, id: `range-${Date.now()}-${Math.random()}` })), // New IDs
+          reservationInterval,
+          lastReservationBeforeClose,
+          // Decide whether to copy the enabled status or keep the target's status
+          enabled: sourceEnabled, // Set target day enabled status same as source
+          // enabled: existingDay?.enabled ?? false // Alternative: keep target day's original enabled status
+        };
+
+        if (existingDay) {
+          // Day exists, update it with copied settings
+          return {
+            ...existingDay,
+            ...copiedSettings,
+          };
+        } else {
+          // Day doesn't exist, create it with copied settings
+          const newDay: DayAvailabilityType = {
+            id: dayTemplate.id,
+            name: dayTemplate.name,
+            shortName: dayTemplate.shortName,
+            ...copiedSettings, // Apply copied settings (includes enabled, timeRanges etc.)
+          };
+          return newDay;
+        }
+      });
+      // Sort by ID to keep days in order, adding explicit types
+      return updatedAvailability.sort((a: DayAvailabilityType, b: DayAvailabilityType) => parseInt(a.id) - parseInt(b.id));
+    });
+
+    showSuccessMessage("Configurações copiadas para todos os dias! Salve as alterações."); // Remind to save
   }
 
-  const handleSaveChanges = () => {
-    localStorage.setItem("restaurantAvailability", JSON.stringify(daysAvailability))
-    showSuccessMessage("Todas as alterações foram salvas com sucesso!")
+  // Function to revert changes back to the last saved state
+  const handleRevertChanges = () => {
+    // Use a deep copy to avoid reference issues
+    setDaysAvailability(JSON.parse(JSON.stringify(initialDaysAvailability)));
+    // Setting state will trigger the useEffect that sets isDirty to false
+    showSuccessMessage("Alterações descartadas."); // Optional feedback
+  };
+
+  const handleSaveChanges = async () => {
+    if (!firestore || !availabilityDocRef) {
+      setError("Erro: Firestore não está disponível para salvar.");
+      showSuccessMessage("Erro ao salvar: conexão com o banco de dados indisponível.", true);
+      return;
+    }
+    // Show immediate feedback might be better UX
+    showSuccessMessage("Salvando alterações...");
+
+    try {
+      // Save the entire structure under the 'days' field in the document
+      await setDoc(availabilityDocRef, { days: daysAvailability }, { merge: true }); // merge: true avoids overwriting other potential fields
+      showSuccessMessage("Todas as alterações foram salvas com sucesso!");
+      // Update the initial state to the newly saved state
+      setInitialDaysAvailability(JSON.parse(JSON.stringify(daysAvailability))); // Deep copy
+      // Reset the dirty state
+      setIsDirty(false);
+    } catch (e) {
+      console.error("Erro ao salvar dados no Firestore:", e);
+      setError("Falha ao salvar alterações no banco de dados.");
+      showSuccessMessage("Erro ao salvar alterações.", true);
+    }
+  };
+
+  const showSuccessMessage = (message: string, isError: boolean = false) => {
+    setSuccessMessage(message);
+    if (isError) {
+      // Keep error message longer or handle differently if needed
+      setTimeout(() => {
+        setSuccessMessage("");
+        setError(null); // Clear related error state if message times out
+      }, 5000);
+    } else {
+      setTimeout(() => {
+        setSuccessMessage("");
+      }, 3000);
+    }
   }
 
-  const showSuccessMessage = (message: string) => {
-    setSuccessMessage(message)
-    setTimeout(() => {
-      setSuccessMessage("")
-    }, 3000)
+  // Handle Loading State
+  if (isLoading) {
+    return <div className="flex justify-center items-center h-64"><p>Carregando configurações...</p></div>;
+  }
+
+  // Handle Error State
+  if (error && !daysAvailability.length) { // Show blocking error only if data couldn't be loaded at all
+    return <Alert variant="destructive"><AlertDescription>{error} Entre em contato com o desenvolvedor do sistema.</AlertDescription></Alert>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-2xl font-bold">Gerenciamento de Disponibilidade</h2>
-        <Button onClick={handleSaveChanges}>
-          <Save className="h-4 w-4 mr-2" />
-          Salvar Alterações
-        </Button>
-      </div>
+        <h2 className="text-2xl font-bold break-keep">Gerenciamento de Disponibilidade</h2>
 
-      {successMessage && (
-        <Alert className="bg-green-50 border-green-200">
-          <AlertDescription className="text-green-600">{successMessage}</AlertDescription>
-        </Alert>
-      )}
+        {/* Group alerts and button on the right */}
+        <div className="flex items-end gap-2">
+          {/* Alert for unsaved changes */}
+          {isDirty && (
+            <Alert variant="default" className="border-yellow-500 text-yellow-700 flex items-center justify-between">
+              <AlertDescription className="flex items-center">
+                Você possui alterações não salvas.
+                <Button size="sm" onClick={handleRevertChanges} className="ml-2 h-auto text-yellow-700 hover:text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20">
+                  Desfazer
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {successMessage && (
+            <Alert className="bg-green-50 border-green-200">
+              <AlertDescription className="text-green-600">{successMessage}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Display non-blocking error */}
+          {error && daysAvailability.length > 0 && (
+            <Alert variant="destructive" className="mt-0"> {/* Remove margin if stacking */}
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          <Button onClick={handleSaveChanges} disabled={!isDirty || isLoading}>
+            <Save className="h-4 w-4 mr-2" />
+            Salvar Alterações
+          </Button>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -503,7 +658,7 @@ export default function AvailabilityEditor() {
                       <TooltipProvider>
                         <Tooltip delayDuration={100}>
                           <TooltipTrigger asChild>
-                            <Button variant="outline" size="sm" onClick={handleCopyToAllDays}>
+                            <Button variant="outline" size="sm" onClick={handleCopyToAllDays} disabled={!currentDay}>
                               <Copy className="h-4 w-4 mr-2" />
                               Copiar para Todos os Dias
                             </Button>
@@ -535,7 +690,7 @@ export default function AvailabilityEditor() {
         <div className="lg:col-span-1 space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-medium">Visualização ({currentDay?.shortName})</CardTitle>
+              <CardTitle className="text-lg font-medium">Visualização ( {currentDay?.name} )</CardTitle>
             </CardHeader>
             <CardContent>
               {currentDay && currentDay.enabled ? (
