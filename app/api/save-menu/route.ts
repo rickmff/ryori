@@ -43,7 +43,7 @@ interface MenuItem {
 interface StructuredMenu {
   Aperitivos?: MenuItem[];
   Entradas?: MenuItem[];
-  PratoPrincipais?: MenuItem[];
+  Principais?: MenuItem[];
   Sobremesas?: MenuItem[];
   Bebidas?: MenuItem[];
   Outros?: MenuItem[];

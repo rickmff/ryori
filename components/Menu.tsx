@@ -83,9 +83,9 @@ export default function Menu() {
           <Loader2 className="h-10 w-10 animate-spin" />
         </div>
       ) : (
-        <div className="container mx-auto max-w-4xl p-6">
+        <div className="container mx-auto max-w-3xl p-6">
           {menu && (
-            <Tabs defaultValue={Object.keys(menu)[0]} className="w-full border rounded-lg p-4">
+            <Tabs defaultValue={Object.keys(menu)[0]} className="w-full border border-black rounded-lg p-6 bg-white/90">
               <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-4 bg-transparent">
                 {Object.keys(menu).map((category) => (
                   category !== "Outros" && (
@@ -104,7 +104,7 @@ export default function Menu() {
                         className="p-2 flex"
                       >
                         <div className="flex-1 text-left">
-                          <h3 className="font-semibold text-sm">{item.name}</h3>
+                          <h3 className="font-semibold text-sm text-black">{item.name}</h3>
                           {item.description && (
                             <p className="text-gray-600 text-xs mt-1">{item.description}</p>
                           )}

@@ -101,16 +101,15 @@ export default function RestaurantePage() {
                   Venha viajar connosco pelos sabores da cozinha tradicional Portuguesa e Japonesa reservando uma mesa conosco.
                 </p>
               </div>
-
               <ReservationForm whatsappNumber={whatsappNumber} />
             </div>
           </section>
 
-          <section id="menu" className="py-16 bg-white/90">
+          <section id="menu" className="py-16 bg-black/50">
             <div className="container">
-              <div className="text-center mb-12 text-black">
-                <h2 className="text-3xl md:text-4xl font-bold mb-4">Menu</h2>
-                <p className="text-muted-foreground">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl md:text-4xl font-bold mb-4">Conheça o nosso Menu</h2>
+                <p className="text-white/60">
                   Descubra o nosso menu completo e selecione o que deseja experimentar.
                 </p>
                 <Menu />

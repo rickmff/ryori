@@ -24,7 +24,7 @@ interface MenuItem {
 interface StructuredMenu {
   Aperitivos?: MenuItem[];
   Entradas?: MenuItem[];
-  PratoPrincipais?: MenuItem[];
+  Principais?: MenuItem[];
   Sobremesas?: MenuItem[];
   Bebidas?: MenuItem[];
   Outros?: MenuItem[];
@@ -507,7 +507,7 @@ export default function MenuUploader() {
     const categoryDisplayNames: Record<MenuCategory, string> = {
       Aperitivos: "Aperitivos",
       Entradas: "Entradas",
-      PratoPrincipais: "Pratos Principais",
+      Principais: "Pratos Principais",
       Sobremesas: "Sobremesas",
       Bebidas: "Bebidas",
       Outros: "Outros"
