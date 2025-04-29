@@ -471,18 +471,6 @@ export default function AvailabilityEditor() {
             </Alert>
           )}
 
-          {successMessage && (
-            <Alert className="bg-green-50 border-green-200">
-              <AlertDescription className="text-green-600">{successMessage}</AlertDescription>
-            </Alert>
-          )}
-
-          {/* Display non-blocking error */}
-          {error && daysAvailability.length > 0 && (
-            <Alert variant="destructive" className="mt-0"> {/* Remove margin if stacking */}
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
           <Button onClick={handleSaveChanges} disabled={!isDirty || isLoading}>
             <Save className="h-4 w-4 mr-2" />
             Salvar Alterações
@@ -690,20 +678,19 @@ export default function AvailabilityEditor() {
                   {currentDay.timeRanges.length > 0 ? (
                     currentDay.timeRanges.map((range, index) => (
                       <div key={`preview-${range.id}`} className="flex items-start gap-4 text-sm">
-                        <Clock className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
                         <div className="flex-grow">
-                          <p>
-                            <span className="font-medium">Aberto:</span> {range.open} - <span className="font-medium">Fecha:</span> {range.close}
-                          </p>
                           {index === 0 && (
-                            <>
-                              <p className="text-xs text-muted-foreground">
-                                Intervalo: {currentDay.reservationInterval} min
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                Última reserva: {currentDay.lastReservationBeforeClose} min antes de fechar
-                              </p>
-                            </>
+                            <div className="flex items-center gap-4">
+                              <Clock className="h-6 w-6 text-muted-foreground shrink-0" />
+                              <div className="flex flex-col gap-1 text-muted-foreground text-sm">
+                                <p>
+                                  <b>Intervalo:</b> {currentDay.reservationInterval} min
+                                </p>
+                                <p>
+                                  <b>Última reserva:</b> {currentDay.lastReservationBeforeClose} min antes de fechar
+                                </p>
+                              </div>
+                            </div>
                           )}
                         </div>
                       </div>

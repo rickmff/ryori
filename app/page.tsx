@@ -1,38 +1,15 @@
 import Image from "next/image"
-import { MapPin, Clock, Phone } from "lucide-react"
+import { MapPin, Phone } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ReservationForm } from "@/components/ReservationForm"
 import Script from 'next/script'
-import { getAvailability } from "@/lib/admin-store"
 import Menu from "@/components/Menu"
+import { OpeningHours } from "@/components/OpeningHours"
 
 export default function RestaurantePage() {
-  const availability = getAvailability()
   const whatsappNumber = process.env.WHATSAPP_NUMBER || "351928149095"
-  const restaurantUrl = "https://your-restaurant-url.com"
+  const restaurantUrl = "https://ryori.pt"
   const imageUrl = `${restaurantUrl}/ryori-hero.jpg`
-
-  const openingHoursSpecification = availability
-    .filter(day => day.enabled)
-    .map(day => {
-      const schemaDayMap: { [key: string]: string } = {
-        'Segunda': 'Monday',
-        'Terça': 'Tuesday',
-        'Quarta': 'Wednesday',
-        'Quinta': 'Thursday',
-        'Sexta': 'Friday',
-        'Sábado': 'Saturday',
-        'Domingo': 'Sunday',
-      };
-      const schemaDay = schemaDayMap[day.name] || day.name;
-
-      return {
-        "@type": "OpeningHoursSpecification",
-        "dayOfWeek": schemaDay,
-        "opens": day.openTime,
-        "closes": day.closeTime
-      };
-    });
 
   const restaurantSchema = {
     "@context": "https://schema.org",
@@ -49,8 +26,7 @@ export default function RestaurantePage() {
     "servesCuisine": ["Portuguesa", "Japonesa", "Fusão"],
     "url": restaurantUrl,
     "image": imageUrl,
-    "priceRange": "€€",
-    "openingHoursSpecification": openingHoursSpecification,
+    "priceRange": "€€€",
   };
 
   return (
@@ -110,7 +86,7 @@ export default function RestaurantePage() {
               <div className="text-center mb-12">
                 <h2 className="text-3xl md:text-4xl font-bold mb-4">Conheça o nosso Menu</h2>
                 <p className="text-white/60">
-                  Descubra o nosso menu completo e selecione o que deseja experimentar.
+                  Venha viajar connosco pelos sabores da cozinha tradicional <br /> Portuguesa e Japonesa reservando uma mesa conosco.
                 </p>
                 <Menu />
               </div>
@@ -127,7 +103,7 @@ export default function RestaurantePage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                <div className="h-[400px] bg-muted rounded-lg overflow-hidden relative border">
+                <div className="h-full bg-muted rounded-lg overflow-hidden relative border">
                   <Image src="/ryori-front.webp" alt="Restaurante Ryōri" fill className="object-cover brightness-[0.8]" />
                 </div>
 
@@ -150,25 +126,9 @@ export default function RestaurantePage() {
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3">
-                      <Clock className="h-5 w-5 mt-1 text-primary flex-shrink-0" />
-                      <div>
-                        <h3 className="font-medium">Horário</h3>
-                        {availability.length > 0 ? (
-                          availability.map((day) => (
-                            <p key={day.id} className="text-muted-foreground">
-                              {day.name}: {day.enabled ? `${day.openTime} - ${day.closeTime}` : "Fechado"}
-                            </p>
-                          ))
-                        ) : (
-                          <p className="text-muted-foreground">Horários indisponíveis.</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                    <OpeningHours />
 
-                  <div className="pt-4">
-                    <Button variant="outline" className="w-full sm:w-auto" asChild>
+                    <Button variant="outline" className="w-full sm:w-auto sm:ml-8" asChild>
                       <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer">
                         Ver no Google Maps
                       </a>

@@ -529,7 +529,7 @@ export default function MenuUploader() {
         {categoriesWithItems.map((category) => (
           <TabsContent key={category} value={category} className="mt-0">
             {/* Adjust height based on container - make it slightly shorter to accommodate buttons */}
-            <ScrollArea className="h-[calc(100vh-350px)] min-h-[300px] pr-3 border-t pt-3"> {/* Adjusted height */}
+            <ScrollArea className="h-[calc(100vh-350px)] min-h-[300px] border-t pt-3"> {/* Adjusted height */}
               <div className="space-y-2">
                 {menuData[category]?.map((item, index) => (
                   <Card key={`${category}-${index}-${uuidv4()}`} className="p-3 text-sm shadow-sm">
@@ -570,21 +570,18 @@ export default function MenuUploader() {
     return (
       <div className="mt-4 space-y-2 border-t pt-3">
         <p className="font-medium text-sm mb-2">
-          Current Images ({allImageCount} / {MAX_FILES}): {/* Show combined count */}
+          Current Images ( {allImageCount} / {MAX_FILES} ):
         </p>
-        {/* Scroll area needs adjustment if loading indicator is inside */}
-        <ScrollArea className="min-h-[150px]"> {/* Adjusted height slightly */}
-          <div className="space-y-2 pr-3">
-            {/* Render initially loaded images */}
+        <ScrollArea className="min-h-[150px]">
+          <div className="space-y-2">
             {initialImages.map((img) => (
               <div key={img.url} className="flex items-center gap-3 p-2 border rounded-md bg-muted/30 relative">
                 <img
-                  src={img.url} // Use the direct URL
+                  src={img.url}
                   alt={`Preview of ${img.originalFilename}`}
                   className="object-contain h-12 w-16 rounded border bg-white flex-shrink-0"
                 />
                 <p className="text-xs font-medium truncate flex-grow" title={img.originalFilename}>{img.originalFilename}</p>
-                {/* Add a tag to indicate it's saved */}
                 <span className="text-[10px] uppercase font-semibold text-muted-foreground/80 mr-1 absolute top-0 right-10 bg-background/70 px-1 rounded-sm backdrop-blur-sm">Saved</span>
                 <Button
                   variant="ghost"
@@ -592,33 +589,28 @@ export default function MenuUploader() {
                   className="h-6 w-6 text-muted-foreground hover:text-destructive flex-shrink-0"
                   onClick={(e) => {
                     e.stopPropagation();
-                    // TODO: Implement removeInitialImage(img.url) which marks for deletion
                     toast({ title: "Not Implemented", description: "Removing saved images requires backend changes.", variant: "destructive" })
                   }}
-                  // Disable remove if loading/processing/saving
                   disabled={isProcessing || isSaving || isLoadingInitialData}
                 >
                   <XCircle className="h-4 w-4" />
                 </Button>
               </div>
             ))}
-            {/* Render newly selected files */}
             {selectedFiles.map((file) => (
               <div key={`${file.name}-preview`} className="flex items-center gap-3 p-2 border rounded-md border-primary/30 bg-primary/5 relative">
                 <img
-                  src={filePreviews.get(file.name)} // Use stored previews
+                  src={filePreviews.get(file.name)}
                   alt={`Preview of ${file.name}`}
                   className="object-contain h-12 w-16 rounded border bg-white flex-shrink-0"
                 />
                 <p className="text-xs font-medium truncate flex-grow" title={file.name}>{file.name}</p>
-                {/* Add a tag to indicate it's new */}
                 <span className="text-[10px] uppercase font-semibold text-primary/80 mr-1 absolute top-0 right-10 bg-background/70 px-1 rounded-sm backdrop-blur-sm">New</span>
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6 text-muted-foreground hover:text-destructive flex-shrink-0"
                   onClick={(e) => { e.stopPropagation(); removeSelectedFile(file.name); }}
-                  // Disable remove if loading/processing/saving
                   disabled={isProcessing || isSaving || isLoadingInitialData}
                 >
                   <XCircle className="h-4 w-4" />
@@ -655,13 +647,7 @@ export default function MenuUploader() {
             <p className="ml-2 text-muted-foreground">Loading latest menu...</p>
           </div>
         )}
-        <div className={`transition-opacity duration-300 ${isLoadingInitialData ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-base font-semibold">
-              {currentMenuId ? 'Edit Existing Menu' : 'Upload New Menu'} Images
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">Add or remove images (max {MAX_FILES}).</p>
-          </CardHeader>
+        <div className={`transition-opacity duration-300 p-4 ${isLoadingInitialData ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
           <CardContent className="space-y-4 p-4 pt-2">
             <ImageDropzone
               onDrop={handleDrop}
@@ -722,11 +708,6 @@ export default function MenuUploader() {
           {/* Message when loaded data exists but no new files added and preview is ready */}
           {currentMenuId && selectedFiles.length === 0 && isPreviewReady && !isProcessing && !isSaving && !processingError && !isLoadingInitialData && (
             <div className="p-5 text-left flex flex-col flex-grow">
-              {/* Content similar to Preview State, but indicate it's loaded */}
-              <CardHeader className="p-0 pb-3 mb-3 border-b">
-                <CardTitle className="text-lg font-semibold">Current Saved Menu</CardTitle>
-                <p className="text-sm text-muted-foreground">This is the latest menu stored. Add new images or Save.</p>
-              </CardHeader>
               <div className="flex-grow mb-4 overflow-hidden">
                 {/* Ensure combinedMenuData is not null before rendering */}
                 {combinedMenuData ? renderMenuDetails(combinedMenuData) : (

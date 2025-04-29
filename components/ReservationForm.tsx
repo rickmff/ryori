@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
-import { CalendarDays, Clock, User, CheckCircle, ArrowLeft, ChevronRight } from "lucide-react"
+import { CalendarDays, Clock, User, CheckCircle, ChevronRight } from "lucide-react"
 import React from "react"
 
 import { firestore } from "@/lib/firebase"

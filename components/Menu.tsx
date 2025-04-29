@@ -90,7 +90,7 @@ export default function Menu() {
                 {Object.keys(menu).map((category) => (
                   category !== "Outros" && (
                     <TabsTrigger key={category} value={category} className="bg-white/30 text-black data-[state=active]:text-black data-[state=active]:bg-white/80 data-[state=active]:border">
-                      {category}
+                      {category === "Aperitivos" ? "Aperitivos" : category === "Entradas" ? "Entradas" : category === "PratoPrincipais" ? "Principais" : category === "Sobremesas" ? "Sobremesas" : category === "Bebidas" ? "Bebidas" : "Outros"}
                     </TabsTrigger>
                   )
                 ))}

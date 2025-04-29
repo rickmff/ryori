@@ -4,24 +4,32 @@ export type TimeSlotType = {
   available: boolean
 }
 
+export type TimeRange = {
+  id: string;
+  open: string;
+  close: string;
+};
+
 export type DayAvailabilityType = {
-  id: string
-  name: string
-  enabled: boolean
-  openTime: string
-  closeTime: string
-  timeSlots: TimeSlotType[]
-}
+  id: string;
+  name: string;
+  enabled: boolean;
+  timeRanges: TimeRange[];
+};
 
 // Funções para gerenciar a disponibilidade
 export function getAvailability(): DayAvailabilityType[] {
-  if (typeof window === "undefined") return []
+  if (typeof window === "undefined") return [];
 
-  const savedAvailability = localStorage.getItem("restaurantAvailability")
+  const savedAvailability = localStorage.getItem("restaurantAvailability");
   if (savedAvailability) {
-    return JSON.parse(savedAvailability)
+    // Ensure timeRanges is always present for each day
+    return JSON.parse(savedAvailability).map((day: any) => ({
+      ...day,
+      timeRanges: Array.isArray(day.timeRanges) ? day.timeRanges : [],
+    }));
   }
-  return []
+  return [];
 }
 
 export function saveAvailability(availability: DayAvailabilityType[]): void {
