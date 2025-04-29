@@ -49,7 +49,7 @@ export default async function AdminDashboardPage() {
         <div className="container flex h-16 items-center justify-between px-6">
           <div className="flex items-center gap-2">
             <span className="text-xl font-bold">Ryōri</span>
-            <span className="text-sm text-muted-foreground hidden sm:inline">Painel Administrativo</span>
+            <span className="text-sm text-muted-foreground hidden md:inline">Painel Administrativo</span>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
             <Button variant="outline" size="sm" asChild className="px-2 sm:px-4">

@@ -1,43 +1,16 @@
 import Image from "next/image"
-import { Card, CardContent } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MapPin, Clock, Phone } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getMenu, getAvailability } from "@/lib/admin-store"
-import type { MenuItemType } from "@/lib/admin-store"
 import { ReservationForm } from "@/components/ReservationForm"
-import { NavBar } from "@/components/NavBar"
 import Script from 'next/script'
-
-function MenuItem({ item }: { item: MenuItemType }) {
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="font-medium">{item.name}</h3>
-            {item.description && <p className="text-sm text-muted-foreground mt-1">{item.description}</p>}
-          </div>
-          <span className="font-medium text-primary">€ {item.price.toFixed(2)}</span>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
+import { getAvailability } from "@/lib/admin-store"
+import Menu from "@/components/Menu"
 
 export default function RestaurantePage() {
-  const menu = getMenu()
   const availability = getAvailability()
   const whatsappNumber = process.env.WHATSAPP_NUMBER || "351928149095"
   const restaurantUrl = "https://your-restaurant-url.com"
   const imageUrl = `${restaurantUrl}/ryori-hero.jpg`
-
-  const categorizedMenu = {
-    entradas: menu.filter((item) => item.category === "entradas"),
-    principais: menu.filter((item) => item.category === "principais"),
-    sobremesas: menu.filter((item) => item.category === "sobremesas"),
-    bebidas: menu.filter((item) => item.category === "bebidas"),
-  }
 
   const openingHoursSpecification = availability
     .filter(day => day.enabled)
@@ -132,59 +105,18 @@ export default function RestaurantePage() {
               <ReservationForm whatsappNumber={whatsappNumber} />
             </div>
           </section>
-          {categorizedMenu.entradas.length > 0 ? (
-            <section id="menu" className="py-16 bg-muted/50">
-              <div className="container">
-                <div className="text-center mb-12">
-                  <h2 className="text-3xl md:text-4xl font-bold mb-4">Menu</h2>
-                  <p className="text-muted-foreground max-w-2xl mx-auto">
-                    Enaltecemos a cozinha Portuguesa com os melhores e mais frescos ingredientes em fusão com a alta cozinha Japonesa.
-                  </p>
-                </div>
 
-                <Tabs defaultValue="entradas" className="w-full max-w-4xl mx-auto">
-                  <TabsList className="grid grid-cols-2 sm:grid-cols-4 mb-8">
-                    <TabsTrigger value="entradas">Entradas</TabsTrigger>
-                    <TabsTrigger value="principais">Principais</TabsTrigger>
-                    <TabsTrigger value="sobremesas">Sobremesas</TabsTrigger>
-                    <TabsTrigger value="bebidas">Bebidas</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="entradas" className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                    {categorizedMenu.entradas.map((item) => (
-                      <MenuItem key={item.id} item={item} />
-                    ))}
-
-                  </TabsContent>
-
-                  <TabsContent value="principais" className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {categorizedMenu.principais.length > 0 ? (
-                      categorizedMenu.principais.map((item) => (
-                        <MenuItem key={item.id} item={item} />
-                      ))
-                    ) : <p className="text-muted-foreground md:col-span-2">Sem pratos principais disponíveis no momento.</p>}
-                  </TabsContent>
-
-                  <TabsContent value="sobremesas" className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {categorizedMenu.sobremesas.length > 0 ? (
-                      categorizedMenu.sobremesas.map((item) => (
-                        <MenuItem key={item.id} item={item} />
-                      ))
-                    ) : <p className="text-muted-foreground md:col-span-2">Sem sobremesas disponíveis no momento.</p>}
-                  </TabsContent>
-
-                  <TabsContent value="bebidas" className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {categorizedMenu.bebidas.length > 0 ? (
-                      categorizedMenu.bebidas.map((item) => (
-                        <MenuItem key={item.id} item={item} />
-                      ))
-                    ) : <p className="text-muted-foreground md:col-span-2">Sem bebidas disponíveis no momento.</p>}
-                  </TabsContent>
-                </Tabs>
+          <section id="menu" className="py-16 bg-white/90">
+            <div className="container">
+              <div className="text-center mb-12 text-black">
+                <h2 className="text-3xl md:text-4xl font-bold mb-4">Menu</h2>
+                <p className="text-muted-foreground">
+                  Descubra o nosso menu completo e selecione o que deseja experimentar.
+                </p>
+                <Menu />
               </div>
-            </section>
-          ) : null}
+            </div>
+          </section>
 
           <section id="location" className="py-16 bg-background">
             <div className="container">

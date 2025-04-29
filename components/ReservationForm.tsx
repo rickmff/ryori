@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { Calendar } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -170,7 +169,7 @@ export function ReservationForm({ whatsappNumber }: ReservationFormProps) {
     }
 
     const formattedDate = date.toLocaleDateString("pt-PT")
-    const message = `Olá, gostaria de fazer uma reserva:\n\nNome: ${name}\nData: ${formattedDate}\nHorário: ${selectedTime}\nPessoas: ${guests}\nObservações: ${notes || "Nenhuma"}`
+    const message = `Olá, gostava de fazer uma reserva:\n\nNome: ${name}\nData: ${formattedDate}\nHorário: ${selectedTime}\nPessoas: ${guests}\nObservações: ${notes || "Nenhuma"}`
 
     const cleanWhatsappNumber = whatsappNumber.replace(/[^\d]/g, "")
     const whatsappUrl = `https://wa.me/${cleanWhatsappNumber}?text=${encodeURIComponent(message)}`

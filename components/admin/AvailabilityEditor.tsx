@@ -668,13 +668,6 @@ export default function AvailabilityEditor() {
                         </Tooltip>
                       </TooltipProvider>
                     </div>
-
-                    <Alert>
-                      <Info className="h-4 w-4" />
-                      <AlertDescription>
-                        A visualização ao lado mostra os horários disponíveis para reserva com base nestas configurações.
-                      </AlertDescription>
-                    </Alert>
                   </>
                 ) : (
                   <p className="text-sm text-muted-foreground">
@@ -687,7 +680,7 @@ export default function AvailabilityEditor() {
         </div>
 
         <div className="lg:col-span-1 space-y-4">
-          <Card>
+          <Card className="h-full">
             <CardHeader>
               <CardTitle className="text-lg font-medium">Visualização ( {currentDay?.name} )</CardTitle>
             </CardHeader>
@@ -746,77 +739,4 @@ export default function AvailabilityEditor() {
       </div>
     </div>
   )
-}
-
-// Dados iniciais de disponibilidade (ATUALIZADO)
-function getInitialAvailability(): DayAvailabilityType[] {
-  const defaultInterval = 60
-  const defaultLastReservation = 120
-  const createRange = (open: string, close: string): TimeRange => ({ id: `range-${Date.now()}-${Math.random()}`, open, close })
-
-  return [
-    {
-      id: "1",
-      name: "Segunda-feira",
-      shortName: "Seg",
-      enabled: false,
-      timeRanges: [],
-      reservationInterval: defaultInterval,
-      lastReservationBeforeClose: defaultLastReservation,
-    },
-    {
-      id: "2",
-      name: "Terça-feira",
-      shortName: "Ter",
-      enabled: true,
-      timeRanges: [createRange("12:00", "15:30"), createRange("19:00", "23:00")],
-      reservationInterval: defaultInterval,
-      lastReservationBeforeClose: defaultLastReservation,
-    },
-    {
-      id: "3",
-      name: "Quarta-feira",
-      shortName: "Qua",
-      enabled: true,
-      timeRanges: [createRange("12:00", "15:30"), createRange("19:00", "23:00")],
-      reservationInterval: defaultInterval,
-      lastReservationBeforeClose: defaultLastReservation,
-    },
-    {
-      id: "4",
-      name: "Quinta-feira",
-      shortName: "Qui",
-      enabled: true,
-      timeRanges: [createRange("12:00", "15:30"), createRange("19:00", "23:00")],
-      reservationInterval: defaultInterval,
-      lastReservationBeforeClose: defaultLastReservation,
-    },
-    {
-      id: "5",
-      name: "Sexta-feira",
-      shortName: "Sex",
-      enabled: true,
-      timeRanges: [createRange("12:00", "15:30"), createRange("19:00", "23:00")],
-      reservationInterval: defaultInterval,
-      lastReservationBeforeClose: defaultLastReservation,
-    },
-    {
-      id: "6",
-      name: "Sábado",
-      shortName: "Sáb",
-      enabled: true,
-      timeRanges: [createRange("12:00", "15:30"), createRange("19:00", "23:00")],
-      reservationInterval: defaultInterval,
-      lastReservationBeforeClose: defaultLastReservation,
-    },
-    {
-      id: "7",
-      name: "Domingo",
-      shortName: "Dom",
-      enabled: false,
-      timeRanges: [],
-      reservationInterval: defaultInterval,
-      lastReservationBeforeClose: defaultLastReservation,
-    },
-  ]
 }
