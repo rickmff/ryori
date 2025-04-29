@@ -89,7 +89,6 @@ export default function RestaurantePage() {
       />
 
       <div className="flex flex-col min-h-screen">
-        <NavBar />
 
         <main className="flex-1">
           <section id="inicio" className="relative">
@@ -121,7 +120,7 @@ export default function RestaurantePage() {
             </div>
           </section>
 
-          <section id="reservas" className="py-16">
+          <section id="Reservations" className="py-16">
             <div className="container sm:max-w-2xl max-w-full">
               <div className="text-center mb-12">
                 <h2 className="text-3xl md:text-4xl font-bold mb-4">Faça sua Reserva</h2>
@@ -130,7 +129,7 @@ export default function RestaurantePage() {
                 </p>
               </div>
 
-              <ReservationForm availability={availability} whatsappNumber={whatsappNumber} />
+              <ReservationForm whatsappNumber={whatsappNumber} />
             </div>
           </section>
           {categorizedMenu.entradas.length > 0 ? (
@@ -187,7 +186,7 @@ export default function RestaurantePage() {
             </section>
           ) : null}
 
-          <section id="local" className="py-16 bg-background">
+          <section id="location" className="py-16 bg-background">
             <div className="container">
               <div className="text-center mb-12">
                 <h2 className="text-3xl md:text-4xl font-bold mb-4">Localização</h2>

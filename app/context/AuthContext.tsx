@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // 4. Redirect AFTER successful Firebase login AND server session creation
     console.log("Client-side login and server session successful. Redirecting...");
-    router.push("/admin/dashboard"); // Redirect to the dashboard
+    router.push("/admin"); // Redirect to the dashboard
   };
 
   const handleSignOut = async () => {

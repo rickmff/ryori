@@ -4,11 +4,14 @@ import * as React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { DayPicker, MonthChangeEventHandler } from "react-day-picker"
 import { startOfMonth } from "date-fns"
+import { enUS } from "date-fns/locale"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 
-export type CalendarProps = React.ComponentProps<typeof DayPicker>
+export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
+  locale?: typeof enUS
+}
 
 function Calendar({
   className,
@@ -16,6 +19,7 @@ function Calendar({
   showOutsideDays = true,
   month: initialMonth,
   onMonthChange,
+  locale = enUS,
   ...props
 }: CalendarProps) {
   const currentMonthStart = startOfMonth(new Date());
@@ -49,8 +53,9 @@ function Calendar({
       fromDate={today}
       month={displayedMonth}
       onMonthChange={handleMonthChange}
+      locale={locale}
       classNames={{
-        months: "flex flex-col space-y-4 sm:space-x-4 sm:space-y-0",
+        months: "flex flex-col space-y-4 sm:space-x-4 sm:space-y-0 capitalize",
         month: "space-y-4",
         caption: "flex py-4 relative items-center justify-center",
         caption_label: "text-lg font-medium mb-2",

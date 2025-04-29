@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 const ADMIN_LOGIN_PATH = '/admin/login';
-const ADMIN_DASHBOARD_PATH = '/admin/dashboard';
+const ADMIN_DASHBOARD_PATH = '/admin';
 const ADMIN_BASE_PATH = '/admin';
 
 export async function middleware(request: NextRequest) {

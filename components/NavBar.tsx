@@ -40,7 +40,7 @@ export function NavBar() {
           {["Menu", "Location"].map((item) => (
             <motion.a
               key={item}
-              href={`#${item.toLowerCase()}`}
+              href={`/#${item.toLowerCase()}`}
               className="text-sm font-medium"
               initial="rest"
               whileHover="hover"

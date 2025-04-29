@@ -32,20 +32,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4 w-full">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
+        <h1 className="text-4xl font-bold text-center mb-10">Ryōri Admin</h1>
         <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">
-              Ryori Admin
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -72,7 +68,7 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={loading}
+                disabled={loading || !email || !password}
               >
                 {loading ? "Signing in..." : "Sign In"}
               </Button>

@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { firestore } from "@/lib/firebase"
 import { doc, getDoc } from "firebase/firestore"
 import type { DayAvailabilityType } from "./admin/AvailabilityEditor"
+import { ptBR } from "date-fns/locale"
 
 function timeToMinutes(time: string): number {
   if (!time || typeof time !== 'string' || !time.includes(":")) {
@@ -211,6 +212,7 @@ export function ReservationForm({ whatsappNumber }: ReservationFormProps) {
         <div className="space-y-2">
           <Calendar
             mode="single"
+            locale={ptBR}
             selected={date}
             onSelect={setDate}
             disabled={(d: Date) => {

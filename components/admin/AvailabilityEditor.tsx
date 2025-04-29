@@ -455,7 +455,7 @@ export default function AvailabilityEditor() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-2xl font-bold break-keep">Gerenciamento de Disponibilidade</h2>
+        <h2 className="text-2xl font-bold break-keep">Gerenciar Reservas</h2>
 
         {/* Group alerts and button on the right */}
         <div className="flex items-end gap-2">
@@ -503,7 +503,6 @@ export default function AvailabilityEditor() {
               >
                 <div className="flex flex-col items-center">
                   <span className="text-sm font-medium">{day.shortName}</span>
-                  <span className="text-xs text-muted-foreground">{day.name.substring(0, 3)}</span>
                 </div>
               </Button>
             ))}
