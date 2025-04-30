@@ -54,7 +54,7 @@ export default function RestaurantePage() {
                 <h1 className="text-4xl md:text-7xl font-bold text-white">Ryōri</h1>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Button size="lg" asChild>
-                    <a href="#reservas" className="hover:bg-black/50 hover:text-white transition-all duration-300">Reservar Mesa</a>
+                    <a href="#reservas" className="bg-black text-white hover:bg-black/50 transition-all duration-300">Reservar Mesa</a>
                   </Button>
                   <Button
                     size="lg"

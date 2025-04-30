@@ -31,7 +31,7 @@ export function MobileMenu() {
           <a href="#local" className="text-lg font-medium hover:underline underline-offset-4 py-2">
             Localização
           </a>
-          <Button className="mt-4" asChild>
+          <Button className="mt-4 bg-black text-white hover:bg-black/50 transition-all duration-300" asChild>
             <a href="#reservas">Reservar Mesa</a>
           </Button>
         </nav>
