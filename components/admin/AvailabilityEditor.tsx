@@ -11,6 +11,7 @@ import { Clock, Save, Copy, Info, PlusCircle, XCircle } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
+import AvailabilityEditorSkeleton from "./AvailabilityEditorSkeleton"; // Import the skeleton component
 
 // Import Firestore functions and the initialized instance
 import { firestore } from "@/lib/firebase" // Assuming your firebase setup is in lib/firebase.ts
@@ -444,7 +445,7 @@ export default function AvailabilityEditor() {
 
   // Handle Loading State
   if (isLoading) {
-    return <div className="flex justify-center items-center h-64"><p>Carregando configurações...</p></div>;
+    return <AvailabilityEditorSkeleton />; // Use the skeleton component
   }
 
   // Handle Error State
