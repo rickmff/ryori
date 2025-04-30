@@ -86,16 +86,16 @@ export default function Menu() {
           <Loader2 className="h-10 w-10 animate-spin" />
         </div>
       ) : (
-        <div className="container mx-auto p-4 sm:p-6 max-w-4xl">
+        <div className="container mx-auto sm:p-6 sm:max-w-4xl w-full px-0">
           {menu && (
-            <Tabs defaultValue={Object.keys(menu)[0]} className="w-full p-4 sm:p-6">
-              <TabsList className="flex flex-row justify-start sm:justify-evenly gap-2 bg-transparent overflow-x-auto pb-2 mb-4">
+            <Tabs defaultValue={Object.keys(menu)[0]} className="w-full pt-6 sm:p-6">
+              <TabsList className="flex flex-row justify-start sm:justify-evenly gap-2 bg-transparent overflow-x-auto overflow-y-hidden pb-2 mb-4">
                 {Object.keys(menu).map((category) => (
                   category !== "Outros" && (
                     <TabsTrigger
                       key={category}
                       value={category}
-                      className="text-base sm:text-lg font-medium data-[state=active]:border-b-2 data-[state=active]:border-white tracking-wider hover:bg-black/50 transition-all duration-300 hover:text-white whitespace-nowrap px-3 py-1.5 sm:px-4 sm:py-2"
+                      className="text-sm sm:text-lg font-medium data-[state=active]:border-b-2 data-[state=active]:border-white tracking-wider hover:bg-black/50 transition-all duration-300 hover:text-white whitespace-nowrap px-3 py-1.5 sm:px-4 sm:py-2"
                     >
                       {category}
                     </TabsTrigger>
@@ -109,17 +109,17 @@ export default function Menu() {
                       {items.map((item: MenuItem) => (
                         <li
                           key={item.name}
-                          className="p-2 flex flex-col sm:flex-row tracking-wide gap-2 sm:gap-0 border-b last:border-b-0"
+                          className="p-2 flex flex-row tracking-wide gap-2 sm:gap-0 border-b last:border-b-0"
                         >
-                          <div className="w-full sm:w-2/3 text-left">
-                            <h3 className="font-medium text-base sm:text-md">{item.name}</h3>
+                          <div className="w-full sm:w-2/3 text-left flex-0">
+                            <h3 className="font-medium sm:text-md text-sm">{item.name}</h3>
                             {item.description && (
-                              <p className="text-muted-foreground text-xs mt-1">{item.description}</p>
+                              <p className="text-muted-foreground sm:text-xs text-xs text-mt-1">{item.description}</p>
                             )}
                           </div>
-                          <div className="w-full sm:w-1/3 text-left sm:text-right font-mono">
+                          <div className="w-full sm:w-1/3 text-left sm:text-right font-mono flex-1">
                             {item.price && (
-                              <p className="text-muted-foreground font-light text-sm">{item.price}</p>
+                              <p className="text-muted-foreground font-light text-xs sm:text-sm">{item.price}</p>
                             )}
                           </div>
                         </li>
