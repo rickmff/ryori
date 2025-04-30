@@ -5,7 +5,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, XCircle, List as ListIcon, UploadCloud, FileScan, Save, Trash2, ScanSearch, GripVertical, PlusCircle } from 'lucide-react';
+import { Loader2, XCircle, List as ListIcon, UploadCloud, FileScan, Save, Trash2, ScanSearch, GripVertical, PlusCircle, Pencil } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { v4 as uuidv4 } from 'uuid';
@@ -33,17 +33,31 @@ import {
 import ImageDropzone from './ImageDropzone';
 import ImagePreviewDialog from './ImagePreviewDialog';
 import { Alert, AlertDescription } from '../ui/alert';
+import { type DropzoneOptions, useDropzone } from 'react-dropzone'; // Re-add useDropzone if needed by ImageDropzone or reinstate handleDrop
 
 // Define the structure for a menu item (mirroring the backend)
 interface MenuItem {
+  id: string;
   name: string;
   description?: string;
   price?: string;
 }
 
-// Define the structure for the categorized menu (mirroring the backend)
+// Define the structure for menu item data SENT to backend (no ID)
+interface BackendMenuItem {
+  name: string;
+  description?: string;
+  price?: string;
+}
+
+// Define the structure for the categorized menu (using frontend MenuItem)
 interface StructuredMenu {
-  [categoryKey: string]: MenuItem[] | undefined; // Allows any string key to hold MenuItem[] or be undefined
+  [categoryKey: string]: MenuItem[] | undefined;
+}
+
+// Define the structure for categorized menu SENT to backend (using BackendMenuItem)
+interface BackendStructuredMenu {
+  [categoryKey: string]: BackendMenuItem[] | undefined;
 }
 
 // Helper type for category keys
@@ -79,15 +93,29 @@ const MAX_FILES = 10;
 // Add new DraggableMenuItem component
 interface DraggableMenuItemProps {
   item: MenuItem;
-  id: string;
+  itemId: string;
   currentCategory: MenuCategory;
   allCategories: MenuCategory[];
   categoryDisplayNames: Record<MenuCategory, string>;
-  onCategoryChange: (itemId: string, newCategory: MenuCategory) => void;
-  onDeleteItem: (itemId: string) => void;
+  onCategoryChange: (itemId: string, oldCategory: MenuCategory, newCategory: MenuCategory) => void;
+  onDeleteItem: (itemId: string, category: MenuCategory) => void;
+  onUpdateItem: (itemId: string, category: MenuCategory, updatedData: Partial<Omit<MenuItem, 'id'>>) => void;
+  isOtherItemEditing: boolean;
+  onEditStateChange: (isEditing: boolean) => void;
 }
 
-function DraggableMenuItem({ item, id, currentCategory, allCategories, categoryDisplayNames, onCategoryChange, onDeleteItem }: DraggableMenuItemProps) {
+function DraggableMenuItem({
+  item,
+  itemId,
+  currentCategory,
+  allCategories,
+  categoryDisplayNames,
+  onCategoryChange,
+  onDeleteItem,
+  onUpdateItem,
+  isOtherItemEditing,
+  onEditStateChange,
+}: DraggableMenuItemProps) {
   const {
     attributes,
     listeners,
@@ -95,61 +123,168 @@ function DraggableMenuItem({ item, id, currentCategory, allCategories, categoryD
     transform,
     transition,
     isDragging,
-  } = useSortable({ id });
+  } = useSortable({ id: itemId });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : 'auto',
   };
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState(item.name);
+  const [editedDesc, setEditedDesc] = useState(item.description || '');
+  const [editedPrice, setEditedPrice] = useState(item.price || '');
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const handleStartEdit = () => {
+    setEditedName(item.name);
+    setEditedDesc(item.description || '');
+    setEditedPrice(item.price || '');
+    setEditError(null);
+    setIsEditing(true);
+    onEditStateChange(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditError(null);
+    onEditStateChange(false);
+  };
+
+  const handleSaveEdit = () => {
+    const trimmedName = editedName.trim();
+    if (!trimmedName) {
+      setEditError("Item name cannot be empty.");
+      return;
+    }
+    onUpdateItem(itemId, currentCategory, {
+      name: trimmedName,
+      description: editedDesc.trim() || undefined,
+      price: editedPrice.trim() || undefined,
+    });
+    setIsEditing(false);
+    setEditError(null);
+    onEditStateChange(false);
+  };
+
+  const dragListeners = isEditing ? {} : listeners;
+  const dragAttributes = isEditing ? {} : attributes;
+
+  // Determine if buttons should be disabled:
+  // Disable if this specific item IS NOT being edited, but SOME OTHER item IS.
+  const disableActions = !isEditing && isOtherItemEditing;
 
   return (
     <Card
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      className="p-3 text-sm shadow-sm space-y-2 bg-card relative group"
+      {...dragAttributes}
+      className={`p-3 text-sm shadow-sm space-y-2 bg-card relative group ${isEditing ? 'border-primary border-dashed' : ''}`}
     >
-      <div
-        {...listeners}
-        className="absolute top-1/2 -translate-y-1/2 left-1 cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-        aria-label="Drag to reorder"
-      >
-        <GripVertical className="h-4 w-4" />
-      </div>
+      {!isEditing && (
+        <div
+          {...dragListeners}
+          className="absolute top-1/2 -translate-y-1/2 left-1 cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+          aria-label="Drag to reorder"
+        >
+          <GripVertical className="h-4 w-4" />
+        </div>
+      )}
 
       <div className="ml-6">
-        <div className="flex justify-between items-start gap-3">
-          <div className="flex-grow min-w-0">
-            <p className="font-semibold">{item.name || "Unnamed Item"}</p>
-            {item.description && (
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {item.description}
-              </p>
-            )}
+        {!isEditing ? (
+          <>
+            <div className="flex justify-between items-start gap-3">
+              <div className="flex-grow min-w-0">
+                <p className="font-semibold">{item.name || "Unnamed Item"}</p>
+                {item.description && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {item.description}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center flex-shrink-0 gap-1">
+                {item.price && (
+                  <p className="font-medium whitespace-nowrap text-sm mr-1">{item.price}</p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-dashed mt-2">
+              <span className="text-xs text-muted-foreground">Categoria:</span>
+              <Select
+                value={currentCategory}
+                onValueChange={(newCategoryValue) => onCategoryChange(itemId, currentCategory, newCategoryValue as MenuCategory)}
+                disabled={disableActions}
+              >
+                <SelectTrigger className="text-xs h-8 w-[150px]"><SelectValue placeholder="Select category" /></SelectTrigger>
+                <SelectContent>{allCategories.map(cat => <SelectItem key={cat} value={cat} className="text-xs">{categoryDisplayNames[cat] || cat}</SelectItem>)}</SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                className="h-8 text-xs text-muted-foreground hover:text-primary"
+                onClick={handleStartEdit}
+                aria-label="Edit item"
+                disabled={disableActions}
+              >
+                <Pencil className="h-4 w-4" />
+                Editar
+              </Button>
+              <Button
+                variant="outline"
+                className="h-8 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 hover:border-destructive"
+                onClick={(e) => { e.stopPropagation(); onDeleteItem(itemId, currentCategory); }}
+                aria-label="Delete item"
+                disabled={disableActions}
+              >
+                <Trash2 className="h-4 w-4" />
+                Remover
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor={`edit-name-${itemId}`} className="text-xs font-medium">Name*</Label>
+              <Input
+                id={`edit-name-${itemId}`}
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                className="h-8 mt-1"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor={`edit-desc-${itemId}`} className="text-xs font-medium">Description</Label>
+              <Input
+                id={`edit-desc-${itemId}`}
+                value={editedDesc}
+                onChange={(e) => setEditedDesc(e.target.value)}
+                className="h-8 mt-1"
+                placeholder="(Optional)"
+              />
+            </div>
+            <div>
+              <Label htmlFor={`edit-price-${itemId}`} className="text-xs font-medium">Price</Label>
+              <Input
+                id={`edit-price-${itemId}`}
+                value={editedPrice}
+                onChange={(e) => setEditedPrice(e.target.value)}
+                className="h-8 mt-1"
+                placeholder="(Optional, e.g., €12.50)"
+              />
+            </div>
+            {editError && <p className="text-xs text-destructive font-medium pt-1">{editError}</p>}
+            <Separator className="my-2" />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={handleCancelEdit}>Cancelar</Button>
+              <Button size="sm" onClick={handleSaveEdit}>
+                <Save className="h-4 w-4 mr-1" /> Salvar
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center flex-shrink-0 gap-2">
-            {item.price && (
-              <p className="font-medium whitespace-nowrap text-sm">{item.price}</p>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 text-muted-foreground hover:text-destructive"
-              onClick={(e) => { e.stopPropagation(); onDeleteItem(id); }}
-              aria-label="Delete item"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-        <div className="flex items-center justify-end gap-2 pt-1 border-t border-dashed mt-2">
-          <span className="text-xs text-muted-foreground">Categoria:</span>
-          <Select value={currentCategory} onValueChange={(newCategoryValue) => onCategoryChange(id, newCategoryValue as MenuCategory)}>
-            <SelectTrigger className="h-7 text-xs w-[150px]"><SelectValue placeholder="Select category" /></SelectTrigger>
-            <SelectContent>{allCategories.map(cat => <SelectItem key={cat} value={cat} className="text-xs">{categoryDisplayNames[cat] || cat}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
+        )}
       </div>
     </Card>
   );
@@ -161,35 +296,29 @@ export default function MenuUploader() {
   const [filePreviews, setFilePreviews] = useState<Map<string, string>>(new Map());
   const [combinedMenuData, setCombinedMenuData] = useState<StructuredMenu | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false); // New state for saving operation
+  const [isSaving, setIsSaving] = useState(false);
   const [processingError, setProcessingError] = useState<string | null>(null);
-  const [isPreviewReady, setIsPreviewReady] = useState(false); // New state for preview
+  const [isPreviewReady, setIsPreviewReady] = useState(false);
   const { toast } = useToast();
 
   // --- New State ---
-  const [isLoadingInitialData, setIsLoadingInitialData] = useState(true); // Loading state for initial fetch
-  const [currentMenuId, setCurrentMenuId] = useState<string | null>(null); // ID of the loaded menu
-  const [initialImages, setInitialImages] = useState<ExistingImage[]>([]); // Images loaded from DB
+  const [isLoadingInitialData, setIsLoadingInitialData] = useState(true);
+  const [currentMenuId, setCurrentMenuId] = useState<string | null>(null);
+  const [initialImages, setInitialImages] = useState<ExistingImage[]>([]);
   const [previewImage, setPreviewImage] = useState<{ url: string; alt: string } | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [initialMenuOrder, setInitialMenuOrder] = useState<StructuredMenu | null>(null);
-
-  // --- New State for Controlled Tabs ---
   const [activeTab, setActiveTab] = useState<MenuCategory | undefined>(undefined);
-
-  // --- State for Inline Add Item Form ---
   const [addItemFormCategory, setAddItemFormCategory] = useState<MenuCategory | null>(null);
   const [inlineNewItemName, setInlineNewItemName] = useState('');
   const [inlineNewItemDesc, setInlineNewItemDesc] = useState('');
   const [inlineNewItemPrice, setInlineNewItemPrice] = useState('');
   const [inlineNewItemError, setInlineNewItemError] = useState<string | null>(null);
-
-  // --- State for New Category Popover ---
   const [isNewCategoryPopoverOpen, setIsNewCategoryPopoverOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryError, setNewCategoryError] = useState<string | null>(null);
+  const [isAnyItemEditing, setIsAnyItemEditing] = useState(false);
 
-  // Add drag and drop sensors at the component level
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -197,27 +326,66 @@ export default function MenuUploader() {
     })
   );
 
-  // Add handleDragEnd at the component level
+  // --- Find Item Helper ---
+  const findItemAndCategory = (itemId: string, menuData: StructuredMenu | null): { item: MenuItem | null, category: MenuCategory | null, index: number } => {
+    if (!menuData) return { item: null, category: null, index: -1 };
+    for (const category of Object.keys(menuData) as MenuCategory[]) {
+      const items = menuData[category];
+      if (items) {
+        const index = items.findIndex(item => item.id === itemId);
+        if (index !== -1) {
+          return { item: items[index], category, index };
+        }
+      }
+    }
+    return { item: null, category: null, index: -1 };
+  };
+
+  // --- Updated handleDragEnd ---
   const handleDragEnd = (event: any) => {
     const { active, over } = event;
 
-    if (active.id !== over.id && combinedMenuData) {
-      const category = active.id.split('-')[0] as MenuCategory;
-      const oldIndex = combinedMenuData[category]!.findIndex(item => `${category}-${item.name}` === active.id);
-      const newIndex = combinedMenuData[category]!.findIndex(item => `${category}-${item.name}` === over.id);
+    if (!over || !combinedMenuData) return;
+    if (active.id === over.id) return;
 
-      const newItems = [...combinedMenuData[category]!];
+    const { category: activeCategory } = findItemAndCategory(active.id, combinedMenuData);
+    const { category: overCategory } = findItemAndCategory(over.id, combinedMenuData);
+
+    if (!activeCategory || activeCategory !== overCategory) {
+      console.warn("Drag and drop between different categories is not supported by this handler.");
+      return;
+    }
+
+    const category = activeCategory;
+    const itemsInCategory = combinedMenuData[category];
+    if (!itemsInCategory) return;
+
+    const oldIndex = itemsInCategory.findIndex(item => item.id === active.id);
+    const newIndex = itemsInCategory.findIndex(item => item.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) {
+      console.error("Could not find dragged items by ID during reorder.");
+      return;
+    }
+
+    console.log(`[DragEnd] Reordering in category '${category}'. Moving item from index ${oldIndex} to ${newIndex}.`);
+
+    setCombinedMenuData(prev => {
+      if (!prev) return null;
+
+      const newItems = [...itemsInCategory];
       const [removed] = newItems.splice(oldIndex, 1);
       newItems.splice(newIndex, 0, removed);
 
-      setCombinedMenuData(prev => ({
+      return {
         ...prev!,
         [category]: newItems
-      }));
-    }
+      };
+    });
+    setHasChanges(true);
   };
 
-  // --- Fetch Latest Menu Data on Mount ---
+  // --- Fetch Latest Menu Data (Assign IDs) ---
   useEffect(() => {
     const fetchLatestMenu = async () => {
       setIsLoadingInitialData(true);
@@ -237,19 +405,23 @@ export default function MenuUploader() {
         }
 
         const data = await response.json();
-        console.log("API Response Data (/api/get-latest-menu):", JSON.stringify(data, null, 2)); // Log the raw data
+        console.log("API Response Data (/api/get-latest-menu):", data); // Log the raw data
+
+        const menuDataWithIds: StructuredMenu = {};
+        if (data.menuData) {
+          for (const category in data.menuData) {
+            menuDataWithIds[category] = (data.menuData[category] || []).map((item: Omit<MenuItem, 'id'>) => ({
+              ...item,
+              id: uuidv4(),
+            }));
+          }
+        }
 
         console.log("Loaded latest menu:", data.id);
 
-        // Log data before setting state
-        console.log("Setting currentMenuId:", data.id);
-        console.log("Setting combinedMenuData:", data.menuData);
-        console.log("Setting initialMenuOrder:", data.menuData);
-        console.log("Setting initialImages:", data.processedImages);
-
         setCurrentMenuId(data.id);
-        setCombinedMenuData(data.menuData);
-        setInitialMenuOrder(data.menuData); // Store initial order
+        setCombinedMenuData(menuDataWithIds);
+        setInitialMenuOrder(menuDataWithIds);
         setInitialImages(data.processedImages || []);
         setIsPreviewReady(true);
 
@@ -272,213 +444,70 @@ export default function MenuUploader() {
     }
 
     const allCategoryKeys = Object.keys(combinedMenuData) as MenuCategory[];
-
     if (!activeTab || !allCategoryKeys.includes(activeTab)) {
-      const firstCategoryWithItems = allCategoryKeys.find(
-        (key) => combinedMenuData[key] && combinedMenuData[key]!.length > 0
-      );
-
-      if (firstCategoryWithItems) {
-        setActiveTab(firstCategoryWithItems);
-      }
+      const firstCategory = allCategoryKeys.length > 0 ? allCategoryKeys[0] : undefined;
+      setActiveTab(firstCategory);
     }
-  }, [combinedMenuData]);
+  }, [combinedMenuData, activeTab]);
 
-  // Update the change detection effect
+  // Update the change detection effect (now compares objects with IDs)
   useEffect(() => {
-    // Function to deeply compare two StructuredMenu objects
     const menusAreEqual = (menu1: StructuredMenu | null, menu2: StructuredMenu | null): boolean => {
-      if (!menu1 && !menu2) return true; // Both null
-      if (!menu1 || !menu2) return false; // One is null, the other isn't
+      if (!menu1 && !menu2) return true;
+      if (!menu1 || !menu2) return false;
 
-      // Create copies before sorting to avoid modifying the original state directly
-      const menu1Copy = menu1 ? { ...menu1 } : null;
-      const menu2Copy = menu2 ? { ...menu2 } : null;
-
-      if (!menu1Copy || !menu2Copy) return false; // Should not happen if previous checks pass, but for type safety
+      const menu1Copy = JSON.parse(JSON.stringify(menu1));
+      const menu2Copy = JSON.parse(JSON.stringify(menu2));
 
       const keys1 = Object.keys(menu1Copy).sort();
       const keys2 = Object.keys(menu2Copy).sort();
 
-
       if (keys1.length !== keys2.length || !keys1.every((key, index) => key === keys2[index])) {
-        // console.log("[Compare] Keys differ:", keys1, keys2);
-        return false; // Different categories or category order (after sort)
+        return false;
       }
 
-      // Compare items within each category
       for (const key of keys1) {
         const items1 = menu1Copy[key] || [];
         const items2 = menu2Copy[key] || [];
 
         if (items1.length !== items2.length) {
-          // console.log(`[Compare] Length differs in ${key}:`, items1.length, items2.length);
           return false;
         }
 
-        // More robust comparison: check name, description, price individually
         for (let i = 0; i < items1.length; i++) {
           const item1 = items1[i];
           const item2 = items2[i];
-          if (item1.name !== item2.name ||
-            (item1.description || '') !== (item2.description || '') || // Treat null/undefined/empty string as same
+          if (item1.id !== item2.id ||
+            item1.name !== item2.name ||
+            (item1.description || '') !== (item2.description || '') ||
             (item1.price || '') !== (item2.price || '')) {
-            // console.log(`[Compare] Item differs in ${key} at index ${i}:`, item1, item2);
             return false;
           }
         }
       }
-      // console.log("[Compare] Menus are equal");
-      return true; // If all checks pass, menus are considered equal
+      return true;
     };
 
     const hasNewFiles = selectedFiles.length > 0;
     let menuHasChanged = false;
-    // Check if there's any menu data (new or existing) and compare it to initial state
-    // Only consider menu changed if there IS a current or initial menu to compare
     if (combinedMenuData || initialMenuOrder) {
       menuHasChanged = !menusAreEqual(combinedMenuData, initialMenuOrder);
     }
 
-    // console.log(`[Changes] Has New Files: ${hasNewFiles}, Menu Changed: ${menuHasChanged}`); // Debug log
-
     setHasChanges(hasNewFiles || menuHasChanged);
 
-  }, [currentMenuId, selectedFiles.length, combinedMenuData, initialMenuOrder]); // Dependencies: include all compared states
+  }, [selectedFiles.length, combinedMenuData, initialMenuOrder]);
 
   const getBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
-        // Return only the base64 part
         resolve(base64String.includes(',') ? base64String.split(',')[1] : base64String);
       };
       reader.onerror = (error) => reject(error);
       reader.readAsDataURL(file);
     });
-  };
-
-  // --- Handle Files from Dropzone ---
-  const handleDrop = useCallback((acceptedFiles: File[]) => {
-    const wasPreviewReady = isPreviewReady; // Check state *before* updates
-
-    // --- Limit Check (consider initial images) ---
-    const currentFileCount = initialImages.length + selectedFiles.length;
-    const availableSlots = MAX_FILES - currentFileCount;
-
-    if (availableSlots <= 0) {
-      toast({
-        title: `File Limit Reached (${MAX_FILES})`,
-        description: "You cannot add more files. Please remove some first.",
-        variant: "destructive",
-      });
-      return; // Reject all new files
-    }
-
-    // Filter out files already selected to avoid duplicates
-    const uniqueNewFiles = acceptedFiles.filter(nf =>
-      !selectedFiles.some(sf => sf.name === nf.name)
-    );
-
-    // Take only as many new files as there are available slots
-    const filesToAdd = uniqueNewFiles.slice(0, availableSlots);
-    const rejectedCount = acceptedFiles.length - filesToAdd.length; // Includes duplicates and excess files
-
-    if (rejectedCount > 0) {
-      toast({
-        title: "Some Files Not Added",
-        description: `${rejectedCount} file(s) were not added due to duplicates or exceeding the ${MAX_FILES}-file limit.`,
-        variant: "default", // Use default or warning color
-      });
-    }
-    // --- End Limit Check ---
-
-    if (filesToAdd.length === 0) return; // No valid new files to add
-
-    const newPreviews = new Map(filePreviews); // Copy existing previews
-    filesToAdd.forEach(file => {
-      const previewUrl = URL.createObjectURL(file);
-      newPreviews.set(file.name, previewUrl);
-    });
-
-    setSelectedFiles(prev => [...prev, ...filesToAdd]); // Add only allowed files
-    setFilePreviews(newPreviews);
-
-    // If preview was ready, adding files requires reprocessing
-    if (wasPreviewReady) {
-      setCombinedMenuData(null);
-      setProcessingError(null);
-      setIsPreviewReady(false);
-      toast({
-        title: "Files Added",
-        description: "New files added. Please process the batch again.", // Simplified message
-        variant: "default"
-      });
-    } else {
-      // Otherwise, just clear any previous error/data if files are added initially
-      setCombinedMenuData(currentMenuId ? combinedMenuData : null); // Keep loaded data if editing
-      setProcessingError(null);
-    }
-
-  }, [selectedFiles, filePreviews, isPreviewReady, toast, currentMenuId, initialImages.length, combinedMenuData]); // Added dependencies
-
-  // Remove a selected file before processing OR before saving
-  const removeSelectedFile = (fileName: string) => {
-    // This currently only handles NEWLY ADDED files (selectedFiles state)
-    // We will need to enhance this to handle removing initialImages as well
-    const wasPreviewReady = isPreviewReady;
-    setSelectedFiles(prev => prev.filter(f => f.name !== fileName));
-    setFilePreviews(prev => {
-      const newPreviews = new Map(prev);
-      const url = newPreviews.get(fileName);
-      if (url) {
-        URL.revokeObjectURL(url);
-      }
-      newPreviews.delete(fileName);
-      return newPreviews;
-    });
-
-    // If preview was ready, removing a file means reprocessing is needed
-    if (wasPreviewReady) {
-      // Keep existing loaded data if editing, otherwise clear
-      setCombinedMenuData(currentMenuId ? combinedMenuData : null);
-      setProcessingError(null);
-      setIsPreviewReady(false); // Needs reprocessing
-      toast({
-        title: "File Removed",
-        description: "Newly added file removed. Process again if needed.",
-        variant: "default"
-      });
-    }
-  };
-
-  // Clear all selected files / discard changes - used for starting completely fresh
-  const clearSelection = () => {
-    // Revoke URLs for newly added files
-    filePreviews.forEach(url => {
-      if (url && url.startsWith('blob:')) URL.revokeObjectURL(url);
-    });
-    setSelectedFiles([]);
-    setFilePreviews(new Map());
-
-    // Reset loaded data as well
-    setInitialImages([]);
-    setCurrentMenuId(null);
-    setCombinedMenuData(null); // Clear current preview
-    setInitialMenuOrder(null); // Clear initial state reference
-
-    // Reset flags
-    setProcessingError(null);
-    setIsPreviewReady(false);
-    setIsProcessing(false);
-    setIsSaving(false);
-    setIsLoadingInitialData(false); // Assume we are ready for new upload
-    setHasChanges(false); // Reset changes flag
-    setActiveTab(undefined); // Reset active tab
-    // Reset inline add form state if open
-    handleCancelInlineItem(); // Call the cancel function for inline form
-    toast({ title: "Cleared", description: "Ready for new menu upload." });
   };
 
   const processFilesForPreview = async () => {
@@ -527,11 +556,21 @@ export default function MenuUploader() {
         });
       }
 
+      const menuDataWithIds: StructuredMenu = {};
+      if (data.menuData) {
+        for (const category in data.menuData) {
+          menuDataWithIds[category] = (data.menuData[category] || []).map((item: Omit<MenuItem, 'id'>) => ({
+            ...item,
+            id: uuidv4(),
+          }));
+        }
+      }
+
       if (currentMenuId && initialImages.length > 0) {
-        console.warn("Processing result might only contain data from new files. Merging logic or full reprocessing via backend needed.");
-        setCombinedMenuData(data.menuData);
+        console.warn("Processing new files while editing: Replacing current preview with results from new files only.");
+        setCombinedMenuData(menuDataWithIds);
       } else {
-        setCombinedMenuData(data.menuData);
+        setCombinedMenuData(menuDataWithIds);
       }
 
       setIsPreviewReady(true);
@@ -573,7 +612,6 @@ export default function MenuUploader() {
     }
   };
 
-  // --- Rescan Selected Files ---
   const handleRescanSelectedFiles = async () => {
     if (selectedFiles.length === 0) {
       toast({ title: "No Files to Rescan", description: "There are no newly added files selected for rescanning.", variant: "default" });
@@ -583,7 +621,7 @@ export default function MenuUploader() {
     toast({ title: "Rescanning Selected Files", description: `Attempting to re-process ${selectedFiles.length} file(s)...` });
 
     setIsProcessing(true);
-    setCombinedMenuData(currentMenuId ? combinedMenuData : null); // Keep existing data if editing, clear otherwise? Or always clear? Let's clear for now.
+    setCombinedMenuData(null);
     setProcessingError(null);
     setIsPreviewReady(false);
 
@@ -596,7 +634,7 @@ export default function MenuUploader() {
         }))
       );
 
-      const response = await fetch('/api/process-menu', { // Using the same endpoint as initial processing
+      const response = await fetch('/api/process-menu', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ images: imageDatas }),
@@ -610,14 +648,21 @@ export default function MenuUploader() {
         });
       }
 
-      // Replace or merge logic might be needed if editing an existing menu
-      // For now, let's assume rescan replaces the preview with new results
-      setCombinedMenuData(data.menuData);
+      const menuDataWithIds: StructuredMenu = {};
+      if (data.menuData) {
+        for (const category in data.menuData) {
+          menuDataWithIds[category] = (data.menuData[category] || []).map((item: Omit<MenuItem, 'id'>) => ({
+            ...item,
+            id: uuidv4(),
+          }));
+        }
+      }
+
+      setCombinedMenuData(menuDataWithIds);
       setIsPreviewReady(true);
 
-      // Handle warnings (similar to processFilesForPreview)
       if (data.warnings && data.warnings.length > 0) {
-        toast({ title: "Rescan Completed with Warnings", description: /* ... warning display ... */ `Found ${Object.values(data.menuData).flat().length} items. Please review.`, variant: "default", duration: 7000 });
+        toast({ title: "Rescan Completed with Warnings", description: `Found ${Object.values(data.menuData).flat().length} items. Please review.`, variant: "default", duration: 7000 });
       } else {
         toast({ title: "Rescan Complete", description: "Review the updated menu items." });
       }
@@ -626,7 +671,7 @@ export default function MenuUploader() {
       console.error("Rescanning error:", error);
       const errorMessage = error.message || "Failed to rescan selected images.";
       setProcessingError(errorMessage);
-      setCombinedMenuData(null); // Clear data on error
+      setCombinedMenuData(null);
       setIsPreviewReady(false);
       toast({ title: "Error During Rescan", description: errorMessage, variant: "destructive" });
     } finally {
@@ -634,27 +679,92 @@ export default function MenuUploader() {
     }
   };
 
+  const handleDrop = useCallback((acceptedFiles: File[]) => {
+    const wasPreviewReady = isPreviewReady; // Check state *before* updates
+
+    // --- Limit Check (consider initial images) ---
+    const currentFileCount = initialImages.length + selectedFiles.length;
+    const availableSlots = MAX_FILES - currentFileCount;
+
+    if (availableSlots <= 0) {
+      toast({
+        title: `File Limit Reached (${MAX_FILES})`,
+        description: "You cannot add more files. Please remove some first.",
+        variant: "destructive",
+      });
+      return; // Reject all new files
+    }
+
+    // Filter out files already selected to avoid duplicates
+    const uniqueNewFiles = acceptedFiles.filter(nf =>
+      !selectedFiles.some(sf => sf.name === nf.name)
+    );
+
+    // Take only as many new files as there are available slots
+    const filesToAdd = uniqueNewFiles.slice(0, availableSlots);
+    const rejectedCount = acceptedFiles.length - filesToAdd.length; // Includes duplicates and excess files
+
+    if (rejectedCount > 0) {
+      toast({
+        title: "Some Files Not Added",
+        description: `${rejectedCount} file(s) were not added due to duplicates or exceeding the ${MAX_FILES}-file limit.`,
+        variant: "default", // Use default or warning color
+      });
+    }
+    // --- End Limit Check ---
+
+    if (filesToAdd.length === 0) return; // No valid new files to add
+
+    const newPreviews = new Map(filePreviews); // Copy existing previews
+    filesToAdd.forEach(file => {
+      const previewUrl = URL.createObjectURL(file);
+      newPreviews.set(file.name, previewUrl);
+    });
+
+    setSelectedFiles(prev => [...prev, ...filesToAdd]); // Add only allowed files
+    setFilePreviews(newPreviews);
+
+    // If preview was ready, adding files requires reprocessing
+    if (wasPreviewReady) {
+      setCombinedMenuData(currentMenuId ? combinedMenuData : null); // Keep loaded if editing
+      setProcessingError(null);
+      setIsPreviewReady(false);
+      toast({
+        title: "Files Added",
+        description: "New files added. Please process the batch again.",
+        variant: "default"
+      });
+    } else {
+      // Otherwise, just clear any previous error/data if files are added initially
+      setCombinedMenuData(currentMenuId ? combinedMenuData : null); // Keep loaded data if editing
+      setProcessingError(null);
+    }
+  }, [selectedFiles, filePreviews, isPreviewReady, toast, currentMenuId, initialImages.length, combinedMenuData]); // Added dependencies for handleDrop
+
   const handleSaveChanges = async () => {
     console.log("--- handleSaveChanges Called ---");
     console.log("Value of currentMenuId at start:", currentMenuId);
 
-    // Guard against saving when there's nothing to save
     if (!combinedMenuData && selectedFiles.length === 0) {
       toast({ title: "Nothing to Save", description: "Please add files or make changes first.", variant: "destructive" });
       return;
     }
-    // Guard specifically against saving an empty menu if that's undesirable
     if (!combinedMenuData || Object.keys(combinedMenuData).every(key => (combinedMenuData[key]?.length ?? 0) === 0)) {
       if (selectedFiles.length === 0 && initialImages.length === 0) {
         toast({ title: "Empty Menu", description: "Cannot save an empty menu with no images.", variant: "destructive" });
         return;
       }
-      // Allow saving if there are images, even if menu data is empty (maybe user wants to save just images?)
     }
-
 
     setIsSaving(true);
     setProcessingError(null);
+
+    const menuDataForBackend: BackendStructuredMenu = {};
+    if (combinedMenuData) {
+      for (const category in combinedMenuData) {
+        menuDataForBackend[category] = (combinedMenuData[category] || []).map(({ id, ...rest }) => rest);
+      }
+    }
 
     try {
       const newImageDatas = await Promise.all(
@@ -665,100 +775,114 @@ export default function MenuUploader() {
         }))
       );
 
-      let response: Response;
-      let saveData: SaveResponse;
-
-      // Determine images to keep (only relevant for updates)
-      // For updates, we only send URLs of images that were initially loaded
-      const imagesToKeepUrls = currentMenuId ? initialImages.map(img => img.url) : [];
-
-      // Prepare payload - adjust based on whether it's a create or update
       const payload = currentMenuId
         ? {
           menuId: currentMenuId,
-          updatedMenuData: combinedMenuData || {},
-          // No image data sent on update anymore
-          // --- End Simplified Update Payload ---
+          updatedMenuData: menuDataForBackend || {},
         }
         : {
-          menuData: combinedMenuData || {}, // Send empty object if null
+          menuData: menuDataForBackend || {},
           images: newImageDatas
         };
 
-      // Determine endpoint
       const endpoint = currentMenuId ? '/api/update-menu' : '/api/save-menu';
-      const method = 'POST'; // Or PUT for update if API supports it
+      const method = currentMenuId ? 'PUT' : 'POST';
 
-      console.log(`Saving menu (${currentMenuId ? 'Update' : 'Create'}) to ${endpoint}...Payload:`, payload);
+      console.log(`Saving menu (${currentMenuId ? 'Update' : 'Create'}) to ${endpoint}...`);
 
-      response = await fetch(endpoint, {
+      const response = await fetch(endpoint, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
-      saveData = await response.json();
-
+      let saveData: SaveResponse;
 
       if (!response.ok) {
-        throw new Error(saveData.error || `Failed to save (Status: ${response.status})`, {
-          cause: saveData.details
+        let errorData: SaveResponse = { menuId: '', imageUrls: [], message: 'Unknown error', error: `Failed to save (Status: ${response.status})` };
+        try {
+          errorData = await response.json();
+        } catch (jsonError) {
+          console.error("Failed to parse error response JSON:", jsonError);
+          errorData.error = errorData.error || response.statusText || `Failed to save (Status: ${response.status})`;
+        }
+        throw new Error(errorData.error || `Server error (Status: ${response.status})`, {
+          cause: errorData.details
         });
+      }
+
+      if (response.status === 204) {
+        console.log("Update successful (204 No Content).");
+        saveData = {
+          menuId: currentMenuId!,
+          imageUrls: initialImages.map(img => img.url),
+          message: "Menu atualizado com sucesso.",
+        };
+      } else {
+        try {
+          saveData = await response.json();
+        } catch (jsonError) {
+          console.error("Failed to parse success response JSON:", jsonError, "Response status:", response.status);
+          saveData = {
+            menuId: currentMenuId || (jsonError as any)?.menuId || '',
+            imageUrls: initialImages.map(img => img.url),
+            message: "Operação concluída, mas a resposta do servidor foi inesperada.",
+            error: "Invalid response format"
+          };
+          toast({
+            title: "Aviso",
+            description: saveData.message,
+            variant: "default",
+          });
+        }
       }
 
       toast({
-        title: "Success!",
-        description: saveData.message || `Menu saved successfully.`,
+        title: "Sucesso!",
+        description: saveData.message || `Menu salvo com sucesso.`,
         duration: saveData.message?.includes('failed to upload') ? 7000 : 5000,
       });
 
-      // --- Start: Update state after successful save ---
-      // We only set currentMenuId if we just CREATED a new menu.
-      // If we UPDATED, currentMenuId should already have the correct value.
-      if (!currentMenuId) {
+      const newlySavedMenuData = combinedMenuData;
+
+      if (!currentMenuId && saveData.menuId) {
         console.log("[Save Flow - Create] Setting currentMenuId to:", saveData.menuId);
         setCurrentMenuId(saveData.menuId);
-      } else {
+      } else if (currentMenuId) {
         console.log("[Save Flow - Update] Preserving existing currentMenuId:", currentMenuId);
-        // Do NOT set currentMenuId again on update
+      } else {
+        console.warn("[Save Flow - Create] No menuId received in save response.");
       }
 
-      // --- State Updates Specific to Save Type ---
-      if (!currentMenuId) { // This condition should now correctly reflect if it was a create operation
-        // CREATING a new menu: Update initial images based on response
-        const responseImageUrls = saveData.imageUrls ?? []; // Expect images on create
+      if (!currentMenuId && saveData.menuId) {
+        const responseImageUrls = saveData.imageUrls ?? [];
         console.log("[Save Flow - Create] Processing responseImageUrls:", responseImageUrls);
         const updatedInitialImages: ExistingImage[] = responseImageUrls.map(url => {
-          const existing = [...initialImages, ...selectedFiles.map(f => ({ url: '', originalFilename: f.name, mimeType: f.type }))]
-            .find(img => img.originalFilename && url.includes(encodeURIComponent(img.originalFilename).replace(/%2F/g, '/'))); // More robust check
-          const filename = existing?.originalFilename || url.substring(url.lastIndexOf('/') + 1).split('?')[0]; // Handle query params
-          const mimeType = existing?.mimeType || 'image/jpeg'; // Default mime type
+          const originalFile = selectedFiles.find(f => {
+            try { return url.includes(encodeURIComponent(f.name)); } catch { return false; }
+          });
+          const filename = originalFile?.name || url.substring(url.lastIndexOf('/') + 1).split('?')[0];
+          const mimeType = originalFile?.type || 'image/jpeg';
           return { url, originalFilename: filename, mimeType };
         });
-        console.log("[Save Flow - Create] Attempting to set initialImages:", updatedInitialImages);
+        console.log("[Save Flow - Create] Setting initialImages:", updatedInitialImages);
         setInitialImages(updatedInitialImages);
-        setSelectedFiles([]); // Clear selected files after successful create
-        setFilePreviews(new Map()); // Clear previews
-      } else {
-        // UPDATING an existing menu: Keep initialImages as they were, clear selectedFiles (if any were somehow added)
+        setSelectedFiles([]);
+        setFilePreviews(new Map());
+      } else if (currentMenuId) {
         console.log("[Save Flow - Update] Keeping existing initialImages. Current value:", initialImages);
-        console.log("[Save Flow - Update] Clearing selectedFiles (if any). Current value:", selectedFiles);
-        // Ensure selectedFiles are cleared even on update, although they shouldn't be added
         setSelectedFiles([]);
         setFilePreviews(new Map());
       }
 
-      // Update the baseline for change detection
-      console.log("[Save Flow - Common] Setting initialMenuOrder to current combinedMenuData.");
-      setInitialMenuOrder(combinedMenuData);
+      console.log("[Save Flow - Common] Setting initialMenuOrder to current combinedMenuData (with IDs).");
+      setInitialMenuOrder(newlySavedMenuData);
 
       console.log("[Save Flow - Common] Resetting hasChanges, processing flags.");
-      setHasChanges(false); // Reset hasChanges flag
-      setIsPreviewReady(true); // Ensure preview stays visible
+      setHasChanges(false);
+      setIsPreviewReady(true);
       setProcessingError(null);
-      // isProcessing should already be false, but ensure it is
       setIsProcessing(false);
-      // --- End: Update state after successful save ---
 
     } catch (error: any) {
       console.error("Saving error:", error);
@@ -771,64 +895,218 @@ export default function MenuUploader() {
         variant: "destructive",
       });
     } finally {
-      setIsSaving(false); // Ensure saving indicator is turned off
+      setIsSaving(false);
     }
   };
 
-  // --- Discard Changes (Revert to last saved state or clear new preview) ---
-  const handleDiscardChanges = () => {
-    if (currentMenuId) {
-      // Revert to last saved state
-      setCombinedMenuData(initialMenuOrder);
+  const handleCategoryChange = (itemId: string, oldCategory: MenuCategory, newCategory: MenuCategory) => {
+    if (!combinedMenuData || oldCategory === newCategory) return;
 
-      // Clear any newly added files
-      filePreviews.forEach(url => {
-        if (url && url.startsWith('blob:')) { // Only revoke blob URLs we created
-          URL.revokeObjectURL(url);
-        }
-      });
-      setSelectedFiles([]); // Discard added files
-      setFilePreviews(new Map()); // Clear previews of added files
+    console.log(`[Cat Change] Request to move item ID ${itemId} from '${oldCategory}' to '${newCategory}'`);
 
-      // Reset states
-      setProcessingError(null);
-      setIsProcessing(false); // Ensure processing state is off
-      setIsPreviewReady(true); // It should be ready based on initialMenuOrder
-      setHasChanges(false); // Crucially, reset the changes flag
+    const { item: itemToMove, index: itemIndex } = findItemAndCategory(itemId, combinedMenuData);
 
-      // Reset inline add form state if open
-      handleCancelInlineItem(); // Call the cancel function for inline form
-
-      // Re-evaluate active tab based on restored data
-      const keys = initialMenuOrder ? Object.keys(initialMenuOrder) : [];
-      const firstCategoryWithItems = keys.find(k => initialMenuOrder && initialMenuOrder[k] && initialMenuOrder[k].length > 0);
-      // Safely get the first key only if the keys array is not empty
-      const firstCategory = firstCategoryWithItems || (keys.length > 0 ? keys[0] : undefined);
-      setActiveTab(firstCategory); // setActiveTab already handles undefined
-
-      toast({ title: "Changes Discarded", description: "Reverted to last saved menu state." });
-
-    } else {
-      // If it was a new menu (no currentMenuId), discard means clearing the processing result and added files
-      setCombinedMenuData(null);
-      setProcessingError(null);
-      setIsPreviewReady(false);
-      // Also clear the files that led to this preview
-      filePreviews.forEach(url => {
-        if (url && url.startsWith('blob:')) URL.revokeObjectURL(url);
-      });
-      setSelectedFiles([]);
-      setFilePreviews(new Map());
-      setHasChanges(false); // Reset changes flag
-      // Reset inline add form state if open
-      handleCancelInlineItem(); // Call the cancel function for inline form
-      toast({ title: "Preview Discarded", description: "Extracted data and added files cleared." });
+    if (!itemToMove || itemIndex === -1 || !combinedMenuData[oldCategory]) {
+      console.warn(`[Cat Change - Failed] Item ID ${itemId} not found in category '${oldCategory}'.`);
+      return;
     }
+
+    console.log(`[Cat Change - Found] Found item at index ${itemIndex}:`, itemToMove);
+
+    setCombinedMenuData(prev => {
+      if (!prev) return null;
+
+      const newState = { ...prev };
+
+      const updatedOldCategoryItems = (prev[oldCategory] || []).filter((_, index) => index !== itemIndex);
+      newState[oldCategory] = updatedOldCategoryItems.length > 0 ? updatedOldCategoryItems : undefined;
+
+      const updatedNewCategoryItems = [...(prev[newCategory] ?? []), itemToMove];
+      newState[newCategory] = updatedNewCategoryItems;
+
+      console.log(`[Cat Change - Moved] Moved '${itemToMove.name}' from ${oldCategory} (${updatedOldCategoryItems.length} items left) to ${newCategory} (${updatedNewCategoryItems.length} items now)`);
+      return newState;
+    });
+    setHasChanges(true);
   };
 
-  // Update renderMenuDetails function
+  const handleDeleteItem = (itemId: string, category: MenuCategory) => {
+    if (!combinedMenuData) return;
+
+    console.log(`[Delete Item] Request to delete item ID ${itemId} from category '${category}'`);
+
+    const { item: itemToDelete, index: itemIndex } = findItemAndCategory(itemId, combinedMenuData);
+
+    if (!itemToDelete || itemIndex === -1 || !combinedMenuData[category]) {
+      console.warn(`[Delete Item - Failed] Item ID ${itemId} not found in category '${category}'.`);
+      return;
+    }
+
+    console.log(`[Delete Item] Deleting '${itemToDelete.name}' (ID: ${itemId}) from category '${category}' at index ${itemIndex}`);
+
+    setCombinedMenuData(prev => {
+      if (!prev) return null;
+
+      const newState = { ...prev };
+      const categoryItems = prev[category] ?? [];
+
+      const updatedItems = categoryItems.filter((_, index) => index !== itemIndex);
+      newState[category] = updatedItems;
+
+      return newState;
+    });
+
+    setHasChanges(true);
+    toast({ title: "Item Removed", description: `\"${itemToDelete.name}\" removed from the menu preview.` });
+  };
+
+  const handleShowAddItemForm = (category: MenuCategory) => {
+    setAddItemFormCategory(category);
+    setInlineNewItemName('');
+    setInlineNewItemDesc('');
+    setInlineNewItemPrice('');
+    setInlineNewItemError(null);
+  };
+
+  const handleCancelInlineItem = () => {
+    setAddItemFormCategory(null);
+    setInlineNewItemName('');
+    setInlineNewItemDesc('');
+    setInlineNewItemPrice('');
+    setInlineNewItemError(null);
+  };
+
+  const handleSaveInlineItem = () => {
+    const targetCategory = addItemFormCategory;
+    if (!targetCategory) return;
+
+    const trimmedName = inlineNewItemName.trim();
+    if (!trimmedName) {
+      setInlineNewItemError("Item name is required.");
+      return;
+    }
+
+    if (combinedMenuData?.[targetCategory]?.some(item => item.name.toLowerCase() === trimmedName.toLowerCase())) {
+      setInlineNewItemError(`An item named "${trimmedName}" already exists in ${targetCategory}.`);
+      return;
+    }
+
+    const newItem: MenuItem = {
+      id: uuidv4(),
+      name: trimmedName,
+      description: inlineNewItemDesc.trim() || undefined,
+      price: inlineNewItemPrice.trim() || undefined,
+    };
+
+    console.log(`[Add Item Inline] Adding new item to ${targetCategory}:`, newItem);
+
+    setCombinedMenuData(prev => {
+      if (!prev) return { [targetCategory]: [newItem] };
+
+      const newState = { ...prev };
+      const categoryItems = newState[targetCategory] ?? [];
+      newState[targetCategory] = [...categoryItems, newItem];
+      return newState;
+    });
+
+    setHasChanges(true);
+    handleCancelInlineItem();
+    toast({ title: "Item Added", description: `"${newItem.name}" added to category "${targetCategory}".` });
+  };
+
+  const handleCancelNewCategory = () => {
+    setIsNewCategoryPopoverOpen(false);
+    setNewCategoryName('');
+    setNewCategoryError(null);
+  };
+
+  const handleSaveNewCategory = () => {
+    const trimmedName = newCategoryName.trim();
+    if (!trimmedName) {
+      setNewCategoryError("Category name cannot be empty.");
+      return;
+    }
+
+    const categoryKey = trimmedName;
+
+    const existingKeys = combinedMenuData ? Object.keys(combinedMenuData) : [];
+    if (existingKeys.some(key => key.toLowerCase() === categoryKey.toLowerCase())) {
+      setNewCategoryError(`Category \"${categoryKey}\" already exists.`);
+      return;
+    }
+
+    console.log(`[New Category] Adding category: ${categoryKey}`);
+
+    setCombinedMenuData(prev => ({
+      ...prev,
+      [categoryKey]: []
+    }));
+
+    setActiveTab(categoryKey as MenuCategory);
+
+    setHasChanges(true);
+    handleCancelNewCategory();
+    toast({
+      title: "Category Created",
+      description: `Category \"${categoryKey}\" added successfully.`
+    });
+  };
+
+  const handleUpdateItem = (itemId: string, category: MenuCategory, updatedData: Partial<Omit<MenuItem, 'id'>>) => {
+    console.log(`[Update Item] Request to update item ID ${itemId} in category '${category}' with data:`, updatedData);
+
+    if (updatedData.name) {
+      const trimmedNewName = updatedData.name.trim();
+      if (combinedMenuData?.[category]?.some(item => item.id !== itemId && item.name.toLowerCase() === trimmedNewName.toLowerCase())) {
+        toast({ title: "Update Failed", description: `An item named "${trimmedNewName}" already exists in ${category}.`, variant: "destructive" });
+        return;
+      }
+    }
+
+    setCombinedMenuData(prev => {
+      if (!prev) return null;
+
+      const newState = { ...prev };
+      const categoryItems = prev[category];
+
+      if (!categoryItems) {
+        console.warn(`[Update Item - Failed] Category '${category}' not found.`);
+        return prev;
+      }
+
+      const itemIndex = categoryItems.findIndex(item => item.id === itemId);
+
+      if (itemIndex === -1) {
+        console.warn(`[Update Item - Failed] Item ID ${itemId} not found in category '${category}'.`);
+        return prev;
+      }
+
+      const updatedItem = {
+        ...categoryItems[itemIndex],
+        ...updatedData
+      };
+
+      const updatedCategoryItems = [
+        ...categoryItems.slice(0, itemIndex),
+        updatedItem,
+        ...categoryItems.slice(itemIndex + 1)
+      ];
+      newState[category] = updatedCategoryItems;
+
+      console.log(`[Update Item - Success] Updated item ID ${itemId} in category '${category}'. New data:`, updatedItem);
+      return newState;
+    });
+
+    setHasChanges(true);
+    toast({ title: "Item Updated", description: `"${updatedData.name || 'Item'}" details updated.` });
+  };
+
+  const handleItemEditStateChange = (isEditing: boolean) => {
+    console.log(`[Edit State Change] An item ${isEditing ? 'started' : 'finished'} editing.`);
+    setIsAnyItemEditing(isEditing);
+  };
+
   const renderMenuDetails = (menuData: StructuredMenu | null) => {
-    // Handle null case explicitly
     if (!menuData) {
       return <p className="text-muted-foreground p-4 text-center">Loading menu data or no data available...</p>;
     }
@@ -843,69 +1121,59 @@ export default function MenuUploader() {
       Outros: "Outros"
     };
 
-    // Derive categories dynamically from the passed menuData
     const allCategoryKeys = Object.keys(menuData) as MenuCategory[];
 
-    // Filter check needs to ensure menuData[key] is not undefined before checking length
     const categoriesWithItems = allCategoryKeys.filter(key => {
-      const items = menuData[key]; // Get items for the key
-      return items && items.length > 0; // Check if items exist AND have length > 0
+      const items = menuData[key];
+      return items && items.length > 0;
     });
 
     if (categoriesWithItems.length === 0 && allCategoryKeys.length === 0) {
-      // If there are NO categories at all
       return <p className="text-muted-foreground p-4 text-center">No categories or items found.</p>;
     } else if (categoriesWithItems.length === 0 && allCategoryKeys.length > 0) {
       // If categories exist but are all empty (this case will be handled by rendering empty tabs)
-      // No need for a top-level message here, the tabs will show they are empty.
     }
 
     return (
       <Tabs
-        value={activeTab || ''} // Use state for value, provide fallback
-        onValueChange={(value) => setActiveTab(value as MenuCategory)} // Update state on change
+        value={activeTab || ''}
+        onValueChange={(value) => setActiveTab(value as MenuCategory)}
         className="w-full px-2"
       >
-        {/* Tabs List and Add Category Button */}
         <div className="flex items-center gap-2 mb-3 px-4">
           <TabsList className="grid flex-grow grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 h-auto">
-            {/* Render tabs only for categories currently in the data */}
             {allCategoryKeys
-              .filter(key => menuData && menuData[key]) // Ensure key exists in data
               .map((category) => (
-                <TabsTrigger key={category} value={category} className="text-sm px-2 py-1.5 hover:bg-black/50 transition-colors duration-300">
-                  {/* Use display name if available, otherwise fallback to key */}
+                <TabsTrigger key={category} value={category} className="text-sm px-2 py-1.5 hover:bg-black/50 transition-colors duration-300" disabled={isAnyItemEditing}>
                   {categoryDisplayNames[category] || category}
                 </TabsTrigger>
               ))}
           </TabsList>
-          {/* Add Category Popover */}
           <Popover open={isNewCategoryPopoverOpen} onOpenChange={setIsNewCategoryPopoverOpen}>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="px-2 flex-shrink-0">
+              <Button variant="ghost" size="sm" className="px-2 flex-shrink-0" disabled={isAnyItemEditing}>
                 <PlusCircle className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-60 p-4">
               <div className="grid gap-4">
                 <div className="space-y-2">
-                  <h4 className="font-medium leading-none">New Category</h4>
-                  <p className="text-xs text-muted-foreground">Enter a name for the new category.</p>
+                  <h4 className="font-medium leading-none">Nova Categoria</h4>
+                  <p className="text-xs text-muted-foreground">Digite um nome para a nova categoria.</p>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="new-category-name" className="text-xs">Name</Label>
+                  <Label htmlFor="new-category-name" className="text-xs">Nome da Categoria</Label>
                   <Input id="new-category-name" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} className="h-8" />
                   {newCategoryError && <p className="text-xs text-destructive">{newCategoryError}</p>}
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button variant="ghost" size="sm" onClick={handleCancelNewCategory}>Cancel</Button>
-                  <Button size="sm" onClick={handleSaveNewCategory}>Create</Button>
+                  <Button variant="ghost" size="sm" onClick={handleCancelNewCategory}>Cancelar</Button>
+                  <Button size="sm" onClick={handleSaveNewCategory}>Criar</Button>
                 </div>
               </div>
             </PopoverContent>
           </Popover>
         </div>
-        {/* Render content for ALL categories */}
         {allCategoryKeys.map((category) => (
           <TabsContent key={category} value={category} className="mt-0 relative">
             <ScrollArea className="h-full min-h-[300px]">
@@ -916,7 +1184,7 @@ export default function MenuUploader() {
                     size="sm"
                     className="w-full flex items-center justify-center gap-1 text-muted-foreground"
                     onClick={() => handleShowAddItemForm(category)}
-                    disabled={addItemFormCategory !== null}
+                    disabled={addItemFormCategory !== null || isAnyItemEditing}
                   >
                     <PlusCircle className="h-4 w-4" /> Add Item to {categoryDisplayNames[category] || category}
                   </Button>
@@ -966,34 +1234,36 @@ export default function MenuUploader() {
                   </Card>
                 )}
 
-                {menuData[category] && menuData[category]!.length > 0 ? (
+                {menuData?.[category] && menuData[category]!.length > 0 ? (
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
                   >
                     <SortableContext
-                      // Ensure items exist before mapping - use empty array as fallback
-                      items={(menuData[category] || []).map(item => `${category}-${item.name}`)}
+                      items={(menuData[category] || []).map(item => item.id)}
                       strategy={verticalListSortingStrategy}
                     >
                       <div className="space-y-2">
                         {(menuData[category] || []).map((item) => (
                           <DraggableMenuItem
-                            key={`${category}-${item.name}`}
-                            id={`${category}-${item.name}`}
+                            key={item.id}
+                            itemId={item.id}
                             item={item}
                             currentCategory={category}
                             allCategories={allCategoryKeys}
                             categoryDisplayNames={categoryDisplayNames}
                             onCategoryChange={handleCategoryChange}
                             onDeleteItem={handleDeleteItem}
+                            onUpdateItem={handleUpdateItem}
+                            isOtherItemEditing={isAnyItemEditing}
+                            onEditStateChange={handleItemEditStateChange}
                           />
                         ))}
                       </div>
                     </SortableContext>
                   </DndContext>
                 ) : (
-                  // Render message for empty category (only if form is not open)
                   addItemFormCategory !== category && <p className="text-sm text-muted-foreground text-center py-8">This category is empty. Add an item above.</p>
                 )}
               </div>
@@ -1004,7 +1274,6 @@ export default function MenuUploader() {
     );
   };
 
-  // --- Render function for combined file list ---
   const renderFileList = () => {
     const allImageCount = initialImages.length + selectedFiles.length;
 
@@ -1071,266 +1340,157 @@ export default function MenuUploader() {
     );
   };
 
-  // --- Handle Category Change (Refined with Logging) ---
-  const handleCategoryChange = (itemId: string, newCategory: MenuCategory) => {
-    if (!combinedMenuData) return;
-
-    // --- More Robust Parsing ---
-    // Find the index of the first hyphen
-    const firstHyphenIndex = itemId.indexOf('-');
-    if (firstHyphenIndex === -1) {
-      console.error(`[Cat Change] Invalid itemId format: ${itemId}`);
-      return;
-    }
-    // Extract category and the rest as the name
-    const oldCategory = itemId.substring(0, firstHyphenIndex) as MenuCategory;
-    const itemName = itemId.substring(firstHyphenIndex + 1); // Get everything after the first hyphen
-    // --- End Parsing Refinement ---
-
-    // Log the parsed values
-    console.log(`[Cat Change - Parsed] itemId: ${itemId}, oldCategory: ${oldCategory}, itemName: ${itemName}`);
-
-    // Find the item and its index in the old category
-    const oldCategoryItems = combinedMenuData[oldCategory] ?? [];
-    console.log(`[Cat Change - Searching] Searching in category ${oldCategory}:`, oldCategoryItems); // Log the array being searched
-
-    // Find index comparing the parsed name
-    const itemIndex = oldCategoryItems.findIndex(item => item.name === itemName);
-
-
-    if (itemIndex === -1) {
-      // Log comparison details if not found
-      console.warn(`[Cat Change - Not Found] Item name '${itemName}' not found in category '${oldCategory}'. Comparing against names:`, oldCategoryItems.map(i => i.name));
-      return;
-    }
-
-    // Get the item to move
-    const itemToMove = oldCategoryItems[itemIndex];
-    console.log(`[Cat Change - Found] Found item at index ${itemIndex}:`, itemToMove);
-
-
-    setCombinedMenuData(prev => {
-      if (!prev) return null;
-
-      const newState = { ...prev };
-
-      // Create a new array for the old category without the moved item
-      const updatedOldCategoryItems = oldCategoryItems.filter((_, index) => index !== itemIndex);
-      newState[oldCategory] = updatedOldCategoryItems;
-
-      // Create a new array for the new category with the added item
-      const updatedNewCategoryItems = [...(prev[newCategory] ?? []), itemToMove];
-      newState[newCategory] = updatedNewCategoryItems;
-
-      console.log(`[Cat Change - Moved] Moved '${itemName}' from ${oldCategory} (${updatedOldCategoryItems.length} items left) to ${newCategory} (${updatedNewCategoryItems.length} items now)`);
-      return newState;
+  const clearSelection = () => {
+    filePreviews.forEach(url => {
+      if (url && url.startsWith('blob:')) URL.revokeObjectURL(url);
     });
-    setHasChanges(true); // Ensure change flag is set
+    setSelectedFiles([]);
+    setFilePreviews(new Map());
+
+    setInitialImages([]);
+    setCurrentMenuId(null);
+    setCombinedMenuData(null);
+    setInitialMenuOrder(null);
+
+    setProcessingError(null);
+    setIsPreviewReady(false);
+    setIsProcessing(false);
+    setIsSaving(false);
+    setIsLoadingInitialData(false);
+    setHasChanges(false);
+    setActiveTab(undefined);
+    handleCancelInlineItem();
+    toast({ title: "Cleared", description: "Ready for new menu upload." });
   };
 
-  // --- Handle Delete Item ---
-  const handleDeleteItem = (itemId: string) => {
-    if (!combinedMenuData) return;
-
-    // Use the same robust parsing as category change
-    const firstHyphenIndex = itemId.indexOf('-');
-    if (firstHyphenIndex === -1) {
-      console.error(`[Delete Item] Invalid itemId format: ${itemId}`);
-      return;
-    }
-    const category = itemId.substring(0, firstHyphenIndex) as MenuCategory;
-    const itemName = itemId.substring(firstHyphenIndex + 1);
-
-    setCombinedMenuData(prev => {
-      if (!prev) return null;
-
-      const categoryItems = prev[category] ?? [];
-      const itemIndex = categoryItems.findIndex(item => item.name === itemName);
-
-      if (itemIndex === -1) {
-        console.warn(`[Delete Item] Item '${itemName}' not found in category '${category}'`);
-        return prev; // Return previous state if not found
+  const removeSelectedFile = (fileName: string) => {
+    const wasPreviewReady = isPreviewReady;
+    setSelectedFiles(prev => prev.filter(f => f.name !== fileName));
+    setFilePreviews(prev => {
+      const newPreviews = new Map(prev);
+      const url = newPreviews.get(fileName);
+      if (url) {
+        URL.revokeObjectURL(url);
       }
-
-      console.log(`[Delete Item] Deleting '${itemName}' from category '${category}'`);
-      const newState = { ...prev };
-      // Create new array excluding the item to delete
-      newState[category] = categoryItems.filter((_, index) => index !== itemIndex);
-      return newState;
+      newPreviews.delete(fileName);
+      return newPreviews;
     });
 
-    setHasChanges(true); // Ensure change flag is set
-    toast({ title: "Item Removed", description: `\"${itemName}\" removed from the menu preview.` });
-  };
-
-  // --- Handle Inline Add Item ---
-  const handleShowAddItemForm = (category: MenuCategory) => {
-    setAddItemFormCategory(category);
-    setInlineNewItemName('');
-    setInlineNewItemDesc('');
-    setInlineNewItemPrice('');
-    setInlineNewItemError(null);
-  };
-
-  const handleCancelInlineItem = () => {
-    setAddItemFormCategory(null);
-    setInlineNewItemName('');
-    setInlineNewItemDesc('');
-    setInlineNewItemPrice('');
-    setInlineNewItemError(null);
-  };
-
-  const handleSaveInlineItem = () => {
-    const targetCategory = addItemFormCategory;
-    if (!targetCategory) return; // Should not happen if button is clicked correctly
-
-    // Basic Validation
-    const trimmedName = inlineNewItemName.trim();
-    if (!trimmedName) {
-      setInlineNewItemError("Item name is required.");
-      return;
+    if (wasPreviewReady) {
+      setCombinedMenuData(currentMenuId ? combinedMenuData : null);
+      setProcessingError(null);
+      setIsPreviewReady(false);
+      toast({
+        title: "File Removed",
+        description: "Newly added file removed. Process again if needed.",
+        variant: "default"
+      });
     }
-
-    const newItem: MenuItem = {
-      name: trimmedName,
-      description: inlineNewItemDesc.trim() || undefined,
-      price: inlineNewItemPrice.trim() || undefined,
-    };
-
-    // Check for duplicate name within the target category
-    if (combinedMenuData?.[targetCategory]?.some(item => item.name === newItem.name)) {
-      setInlineNewItemError(`An item named "${newItem.name}" already exists in ${targetCategory}.`);
-      return;
-    }
-
-
-    console.log(`[Add Item Inline] Adding new item to ${targetCategory}:`, newItem);
-
-    setCombinedMenuData(prev => {
-      if (!prev) return { [targetCategory]: [newItem] };
-
-      const newState = { ...prev };
-      const categoryItems = newState[targetCategory] ?? [];
-      newState[targetCategory] = [...categoryItems, newItem];
-      return newState;
-    });
-
-    setHasChanges(true);
-    handleCancelInlineItem(); // Reset form state
-    toast({ title: "Item Added", description: `"${newItem.name}" added to category "${targetCategory}".` });
   };
 
-  // --- Handle New Category ---
-  const handleCancelNewCategory = () => {
-    setIsNewCategoryPopoverOpen(false);
-    setNewCategoryName('');
-    setNewCategoryError(null);
-  };
+  const handleDiscardChanges = () => {
+    if (currentMenuId) {
+      setCombinedMenuData(initialMenuOrder);
 
-  const handleSaveNewCategory = () => {
-    const trimmedName = newCategoryName.trim();
-    if (!trimmedName) {
-      setNewCategoryError("Category name cannot be empty.");
-      return;
+      filePreviews.forEach(url => {
+        if (url && url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+      setSelectedFiles([]);
+      setFilePreviews(new Map());
+
+      setProcessingError(null);
+      setIsProcessing(false);
+      setIsPreviewReady(true);
+      setHasChanges(false);
+
+      handleCancelInlineItem();
+
+      const keys = initialMenuOrder ? Object.keys(initialMenuOrder) : [];
+      const firstCategoryWithItems = keys.find(k => initialMenuOrder && initialMenuOrder[k] && initialMenuOrder[k].length > 0);
+      const firstCategory = firstCategoryWithItems || (keys.length > 0 ? keys[0] : undefined);
+      setActiveTab(firstCategory);
+
+      toast({ title: "Changes Discarded", description: "Reverted to last saved menu state." });
+
+    } else {
+      setCombinedMenuData(null);
+      setProcessingError(null);
+      setIsPreviewReady(false);
+      filePreviews.forEach(url => {
+        if (url && url.startsWith('blob:')) URL.revokeObjectURL(url);
+      });
+      setSelectedFiles([]);
+      setFilePreviews(new Map());
+      setHasChanges(false);
+      handleCancelInlineItem();
+      toast({ title: "Preview Discarded", description: "Extracted data and added files cleared." });
     }
-
-    // Basic normalization (e.g., capitalize first letter, handle spaces if desired)
-    // For now, just use the trimmed name. Consider more robust key generation if needed.
-    const categoryKey = trimmedName; // Example: Use trimmed name directly as key
-
-    // Check for conflicts (case-insensitive comparison with existing keys)
-    const existingKeys = combinedMenuData ? Object.keys(combinedMenuData) : [];
-    if (existingKeys.some(key => key.toLowerCase() === categoryKey.toLowerCase())) {
-      setNewCategoryError(`Category \"${categoryKey}\" already exists.`);
-      return;
-    }
-
-    console.log(`[New Category] Adding category: ${categoryKey}`);
-
-    setCombinedMenuData(prev => ({
-      ...prev,
-      [categoryKey]: [] // Add new category with empty array
-    }));
-
-    // Activate the new tab
-    setActiveTab(categoryKey as MenuCategory); // Cast needed as key is string initially
-
-    setHasChanges(true);
-    handleCancelNewCategory(); // Close popover and clear state
-    toast({
-      title: "Category Created",
-      description: `Category \"${categoryKey}\" added successfully.`
-    });
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-2xl font-bold break-keep">Gerenciar Menu</h2>
-        <div className="flex flex-row gap-2"> {/* Use flex-wrap for smaller screens */}
-          {/* Discard Changes Button (only when editing existing and has changes) */}
-          {currentMenuId && hasChanges && (
+        <div className="flex flex-row items-center gap-2">
+          {currentMenuId && hasChanges && !isAnyItemEditing && (
             <Alert variant="default" className="border-yellow-500 text-yellow-700 flex items-center justify-between">
               <AlertDescription className="flex items-center">
                 Você possui alterações não salvas.
-                <Button size="sm" onClick={handleDiscardChanges}
-                  className="ml-2 h-auto text-yellow-700 hover:text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20">
+                <Button size="sm" onClick={handleDiscardChanges} disabled={isAnyItemEditing} className="ml-2 h-auto text-yellow-700 hover:text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20">
                   Desfazer
                 </Button>
               </AlertDescription>
             </Alert>
           )}
-          {/* Clear/New Menu Button (show if existing menu OR any files/data) */}
           {(currentMenuId || selectedFiles.length > 0 || combinedMenuData) && (
             <Button
-              onClick={clearSelection} // Use clearSelection to start fresh
+              onClick={clearSelection}
               variant="destructive"
               size="sm"
-              disabled={isSaving || isLoadingInitialData || isProcessing}
+              disabled={isSaving || isLoadingInitialData || isProcessing || isAnyItemEditing}
               title="Clear everything and start a new menu upload"
             >
               <XCircle className="mr-1.5 h-4 w-4" />
               Novo Menu
             </Button>
           )}
-          {/* Rescan Button - Disable if processing/saving/loading OR if editing existing menu */}
-          {selectedFiles.length > 0 && ( // Only show if there are NEW files selected
+          {selectedFiles.length > 0 && !currentMenuId && (
             <Button
               onClick={handleRescanSelectedFiles}
               variant="secondary"
               size="sm"
-              disabled={isProcessing || isSaving || isLoadingInitialData || !!currentMenuId} // Disable if editing
+              disabled={isProcessing || isSaving || isLoadingInitialData || isAnyItemEditing}
             >
               <ScanSearch className="mr-1.5 h-4 w-4" /> Rescan Selected
             </Button>
           )}
-          {/* Save/Update Button */}
           <Button
             onClick={handleSaveChanges}
             size="sm"
+            disabled={isSaving || isLoadingInitialData || isProcessing || isAnyItemEditing || !hasChanges}
           >
-            {/* Add spinner when saving */}
             {isSaving ? (
               <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
             ) : (
               <Save className="mr-1.5 h-4 w-4" />
             )}
-            {currentMenuId ? 'Atualizar Menu' : 'Salvar Novo Menu'} {/* Dynamic Text */}
+            {currentMenuId ? 'Atualizar Menu' : 'Salvar Novo Menu'}
           </Button>
         </div>
       </div>
-      <div className="flex flex-col lg:flex-row justify-start items-start gap-4 w-full">
-        <Card className={`w-full lg:w-1/3 relative`}>
-          <div className={`transition-opacity duration-300 p-4 ${isLoadingInitialData ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+      <div className={`flex flex-col lg:flex-row justify-start items-start gap-4 w-full ${isAnyItemEditing ? 'opacity-70 pointer-events-none' : ''}`}>
+        <Card className={`w-full lg:w-1/3 relative ${isAnyItemEditing ? 'pointer-events-auto opacity-100' : ''}`}>
+          <div className={`transition-opacity duration-300 p-4 ${isLoadingInitialData ? 'opacity-50 pointer-events-none' : 'opacity-100'} ${isAnyItemEditing ? 'pointer-events-none' : ''}`}>
             <CardContent className="space-y-4 p-4 pt-2">
-              {/* --- Conditionally Render Dropzone --- */}
               {!currentMenuId && !isLoadingInitialData && !isProcessing && !isSaving && (initialImages.length + selectedFiles.length) < MAX_FILES && (
                 <ImageDropzone
                   onDrop={handleDrop}
-                  disabled={!!currentMenuId} // Already disabling, but hiding is clearer
+                  disabled={!!currentMenuId || isAnyItemEditing}
                 />
               )}
-              {(initialImages.length + selectedFiles.length) >= MAX_FILES && !currentMenuId && ( // Only show if creating new menu
+              {(initialImages.length + selectedFiles.length) >= MAX_FILES && !currentMenuId && (
                 <p className="text-xs text-destructive text-center mt-1">Maximum {MAX_FILES} files reached.</p>
               )}
               {renderFileList()}
@@ -1338,8 +1498,7 @@ export default function MenuUploader() {
           </div>
         </Card>
 
-        <Card className="text-center border w-full lg:w-2/3 min-h-[230px] flex flex-col relative">
-          {/* --- Loading Overlay --- */}
+        <Card className={`text-center border w-full lg:w-2/3 min-h-[230px] flex flex-col relative ${isAnyItemEditing ? 'pointer-events-auto opacity-100' : ''}`}>
           {(isLoadingInitialData || isProcessing || isSaving) && (
             <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -1349,20 +1508,15 @@ export default function MenuUploader() {
             </div>
           )}
 
-          {/* Content Area (conditionally rendered based on state) */}
-          <div className={`flex flex-col flex-grow transition-opacity duration-300 ${(isLoadingInitialData || isProcessing || isSaving) ? 'opacity-30' : 'opacity-100'}`}>
-
-            {/* --- Error State --- */}
+          <div className={`flex flex-col flex-grow transition-opacity duration-300 ${(isLoadingInitialData || isProcessing || isSaving) ? 'opacity-30' : 'opacity-100'} ${isAnyItemEditing ? '' : ''}`}>
             {!isLoadingInitialData && !isProcessing && !isSaving && processingError && (
               <CardContent className="py-12 flex flex-col items-center justify-center flex-grow">
                 <XCircle className="h-16 w-16 text-destructive/70 mb-4" />
                 <p className="text-destructive font-medium">Error Occurred</p>
                 <p className="text-sm text-muted-foreground mt-1 px-4 break-words">{processingError}</p>
-                {/* Optionally add a retry button if applicable */}
               </CardContent>
             )}
 
-            {/* --- Empty State (No Files/Data & No Error) --- */}
             {!isLoadingInitialData && !isProcessing && !isSaving && !processingError && !combinedMenuData && initialImages.length === 0 && selectedFiles.length === 0 && (
               <CardContent className="py-12 flex flex-col items-center justify-center flex-grow">
                 <UploadCloud className="h-16 w-16 text-muted-foreground/50 mb-4" />
@@ -1371,7 +1525,6 @@ export default function MenuUploader() {
               </CardContent>
             )}
 
-            {/* --- "Process Files" State (No Error) --- */}
             {!isLoadingInitialData && !isProcessing && !isSaving && !processingError && selectedFiles.length > 0 && !isPreviewReady && (
               <div className="p-5 flex flex-col flex-grow items-center justify-center">
                 <FileScan className="h-16 w-16 text-muted-foreground/70 mb-4" />
@@ -1381,7 +1534,6 @@ export default function MenuUploader() {
                 <Button
                   className="mt-4"
                   onClick={processFilesForPreview}
-                  // Disable button only if actually processing/saving/loading
                   disabled={isProcessing || isSaving || isLoadingInitialData}
                   size="sm"
                 >
@@ -1391,7 +1543,6 @@ export default function MenuUploader() {
               </div>
             )}
 
-            {/* --- Render Menu Details State (Preview Ready & No Error) --- */}
             {!isLoadingInitialData && !isProcessing && !isSaving && !processingError && combinedMenuData && isPreviewReady && (
               <div className="p-5 text-left flex flex-col flex-grow">
                 <div className="flex-grow mb-4 overflow-hidden">

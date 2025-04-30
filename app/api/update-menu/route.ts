@@ -25,7 +25,7 @@ interface UpdateRequestBody {
   updatedMenuData: StructuredMenu;
 }
 
-export async function POST(request: Request) {
+export async function PUT(request: Request) {
   // Check Firebase Admin Initialization
   if (!admin.apps.length) {
     console.error("CRITICAL: Firebase Admin SDK not initialized before /api/update-menu execution.");
@@ -54,10 +54,12 @@ export async function POST(request: Request) {
 
     console.log(`Successfully updated menu data for document: ${menuId}`);
 
-    return NextResponse.json({ message: 'Menu updated successfully' });
+    return NextResponse.json({ message: 'Menu updated successfully' }, { status: 200 });
 
   } catch (error: any) {
-    console.error(`Error updating menu (ID: ${(request as any)?.body?.menuId || 'unknown'}):`, error);
+    // Use request.method to accurately log
+    const requestedMenuId = (request as any)?._nextUrl?.searchParams?.get('menuId') || 'unknown'; // Example of getting ID if it were in query
+    console.error(`Error during ${request.method} for menu (ID: ${requestedMenuId}):`, error);
 
     // Check for specific Firestore errors (e.g., document not found)
     if (error.code === 'NOT_FOUND' || error.message?.includes('NOT_FOUND')) {
