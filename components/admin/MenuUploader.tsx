@@ -290,6 +290,66 @@ function DraggableMenuItem({
   );
 }
 
+// --- Skeleton Components ---
+
+function LeftCardSkeleton() {
+  return (
+    <Card className="w-full lg:w-1/3">
+      <CardContent className="p-4 pt-6 space-y-4 animate-pulse">
+        {/* Skeleton for title */}
+        <div className="h-4 bg-muted rounded w-3/4 mb-4"></div>
+        {/* Skeleton for file list items */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-16 bg-muted rounded flex-shrink-0"></div>
+            <div className="h-4 bg-muted rounded flex-grow"></div>
+            <div className="h-6 w-6 bg-muted rounded-full flex-shrink-0"></div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-16 bg-muted rounded flex-shrink-0"></div>
+            <div className="h-4 bg-muted rounded flex-grow"></div>
+            <div className="h-6 w-6 bg-muted rounded-full flex-shrink-0"></div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-16 bg-muted rounded flex-shrink-0"></div>
+            <div className="h-4 bg-muted rounded flex-grow"></div>
+            <div className="h-6 w-6 bg-muted rounded-full flex-shrink-0"></div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function RightCardSkeleton() {
+  return (
+    <Card className="w-full lg:w-2/3 min-h-[230px]">
+      <CardContent className="p-4 pt-6 space-y-4 animate-pulse">
+        {/* Skeleton for Tabs List */}
+        <div className="flex items-center gap-2 mb-3 px-4">
+          <div className="flex-grow grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+            <div className="h-8 bg-muted rounded"></div>
+            <div className="h-8 bg-muted rounded"></div>
+            <div className="h-8 bg-muted rounded"></div>
+            <div className="h-8 bg-muted rounded hidden sm:block"></div>
+            <div className="h-8 bg-muted rounded hidden lg:block"></div>
+          </div>
+          <div className="h-8 w-8 bg-muted rounded flex-shrink-0"></div> {/* Add Category Button Skeleton */}
+        </div>
+        {/* Skeleton for Tab Content Area */}
+        <div className="p-4 space-y-3">
+          <div className="h-8 bg-muted rounded w-full mb-4"></div> {/* Add item button skel */}
+          <div className="h-20 bg-muted rounded w-full mb-3"></div> {/* Item skel */}
+          <div className="h-20 bg-muted rounded w-full mb-3"></div> {/* Item skel */}
+          <div className="h-20 bg-muted rounded w-full"></div>   {/* Item skel */}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// --- End Skeleton Components ---
+
 export default function MenuUploader() {
   // --- Existing State ---
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -1433,126 +1493,145 @@ export default function MenuUploader() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-2xl font-bold break-keep">Gerenciar Menu</h2>
-        <div className="flex flex-row items-center gap-2">
-          {currentMenuId && hasChanges && !isAnyItemEditing && (
-            <Alert variant="default" className="border-yellow-500 text-yellow-700 flex items-center justify-between">
-              <AlertDescription className="flex items-center">
-                Você possui alterações não salvas.
-                <Button size="sm" onClick={handleDiscardChanges} disabled={isAnyItemEditing} className="ml-2 h-auto text-yellow-700 hover:text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20">
-                  Desfazer
-                </Button>
-              </AlertDescription>
-            </Alert>
-          )}
-          {(currentMenuId || selectedFiles.length > 0 || combinedMenuData) && (
-            <Button
-              onClick={clearSelection}
-              variant="destructive"
-              size="sm"
-              disabled={isSaving || isLoadingInitialData || isProcessing || isAnyItemEditing}
-              title="Clear everything and start a new menu upload"
-            >
-              <XCircle className="mr-1.5 h-4 w-4" />
-              Novo Menu
-            </Button>
-          )}
-          {selectedFiles.length > 0 && !currentMenuId && (
-            <Button
-              onClick={handleRescanSelectedFiles}
-              variant="secondary"
-              size="sm"
-              disabled={isProcessing || isSaving || isLoadingInitialData || isAnyItemEditing}
-            >
-              <ScanSearch className="mr-1.5 h-4 w-4" /> Rescan Selected
-            </Button>
-          )}
-          <Button
-            onClick={handleSaveChanges}
-            size="sm"
-            disabled={isSaving || isLoadingInitialData || isProcessing || isAnyItemEditing || !hasChanges}
-          >
-            {isSaving ? (
-              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="mr-1.5 h-4 w-4" />
+        {!isLoadingInitialData && (
+          <div className="flex flex-row items-center gap-2">
+            {currentMenuId && hasChanges && !isAnyItemEditing && (
+              <Alert variant="default" className="border-yellow-500 text-yellow-700 flex items-center justify-between">
+                <AlertDescription className="flex items-center">
+                  Você possui alterações não salvas.
+                  <Button size="sm" onClick={handleDiscardChanges} disabled={isAnyItemEditing} className="ml-2 h-auto text-yellow-700 hover:text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20">
+                    Desfazer
+                  </Button>
+                </AlertDescription>
+              </Alert>
             )}
-            {currentMenuId ? 'Atualizar Menu' : 'Salvar Novo Menu'}
-          </Button>
-        </div>
-      </div>
-      <div className={`flex flex-col lg:flex-row justify-start items-start gap-4 w-full ${isAnyItemEditing ? 'opacity-70 pointer-events-none' : ''}`}>
-        <Card className={`w-full lg:w-1/3 relative ${isAnyItemEditing ? 'pointer-events-auto opacity-100' : ''}`}>
-          <div className={`transition-opacity duration-300 p-4 ${isLoadingInitialData ? 'opacity-50 pointer-events-none' : 'opacity-100'} ${isAnyItemEditing ? 'pointer-events-none' : ''}`}>
-            <CardContent className="space-y-4 p-4 pt-2">
-              {!currentMenuId && !isLoadingInitialData && !isProcessing && !isSaving && (initialImages.length + selectedFiles.length) < MAX_FILES && (
-                <ImageDropzone
-                  onDrop={handleDrop}
-                  disabled={!!currentMenuId || isAnyItemEditing}
-                />
+            {(currentMenuId || selectedFiles.length > 0 || combinedMenuData) && (
+              <Button
+                onClick={clearSelection}
+                variant="destructive"
+                size="sm"
+                disabled={isSaving || isLoadingInitialData || isProcessing || isAnyItemEditing}
+                title="Clear everything and start a new menu upload"
+              >
+                <XCircle className="mr-1.5 h-4 w-4" />
+                Novo Menu
+              </Button>
+            )}
+            {selectedFiles.length > 0 && !currentMenuId && (
+              <Button
+                onClick={handleRescanSelectedFiles}
+                variant="secondary"
+                size="sm"
+                disabled={isProcessing || isSaving || isLoadingInitialData || isAnyItemEditing}
+              >
+                <ScanSearch className="mr-1.5 h-4 w-4" /> Rescan Selected
+              </Button>
+            )}
+            <Button
+              onClick={handleSaveChanges}
+              size="sm"
+              disabled={isSaving || isLoadingInitialData || isProcessing || isAnyItemEditing || !hasChanges}
+            >
+              {isSaving ? (
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-1.5 h-4 w-4" />
               )}
-              {(initialImages.length + selectedFiles.length) >= MAX_FILES && !currentMenuId && (
-                <p className="text-xs text-destructive text-center mt-1">Maximum {MAX_FILES} files reached.</p>
-              )}
-              {renderFileList()}
-            </CardContent>
+              {currentMenuId ? 'Atualizar Menu' : 'Salvar Novo Menu'}
+            </Button>
           </div>
-        </Card>
+        )}
+        {isLoadingInitialData && (
+          <div className="flex flex-row items-center gap-2 animate-pulse">
+            <div className="h-9 w-24 bg-muted rounded"></div>
+            <div className="h-9 w-36 bg-muted rounded"></div>
+          </div>
+        )}
+      </div>
 
-        <Card className={`text-center border w-full lg:w-2/3 min-h-[230px] flex flex-col relative ${isAnyItemEditing ? 'pointer-events-auto opacity-100' : ''}`}>
-          {(isLoadingInitialData || isProcessing || isSaving) && (
-            <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="ml-2 text-sm text-muted-foreground">
-                {isLoadingInitialData ? "Carregando menu..." : isProcessing ? "Processando imagens..." : "Salvando menu..."}
-              </p>
-            </div>
-          )}
-
-          <div className={`flex flex-col flex-grow transition-opacity duration-300 ${(isLoadingInitialData || isProcessing || isSaving) ? 'opacity-30' : 'opacity-100'} ${isAnyItemEditing ? '' : ''}`}>
-            {!isLoadingInitialData && !isProcessing && !isSaving && processingError && (
-              <CardContent className="py-12 flex flex-col items-center justify-center flex-grow">
-                <XCircle className="h-16 w-16 text-destructive/70 mb-4" />
-                <p className="text-destructive font-medium">Error Occurred</p>
-                <p className="text-sm text-muted-foreground mt-1 px-4 break-words">{processingError}</p>
-              </CardContent>
-            )}
-
-            {!isLoadingInitialData && !isProcessing && !isSaving && !processingError && !combinedMenuData && initialImages.length === 0 && selectedFiles.length === 0 && (
-              <CardContent className="py-12 flex flex-col items-center justify-center flex-grow">
-                <UploadCloud className="h-16 w-16 text-muted-foreground/50 mb-4" />
-                <p className="text-muted-foreground font-medium">Add menu images using the panel on the left.</p>
-                <p className="text-sm text-muted-foreground mt-1">Start by uploading images for a new menu.</p>
-              </CardContent>
-            )}
-
-            {!isLoadingInitialData && !isProcessing && !isSaving && !processingError && selectedFiles.length > 0 && !isPreviewReady && (
-              <div className="p-5 flex flex-col flex-grow items-center justify-center">
-                <FileScan className="h-16 w-16 text-muted-foreground/70 mb-4" />
-                <p className="font-medium text-muted-foreground">
-                  {selectedFiles.length} new file{selectedFiles.length > 1 ? 's added.' : ' added.'} Process to see preview.
-                </p>
-                <Button
-                  className="mt-4"
-                  onClick={processFilesForPreview}
-                  disabled={isProcessing || isSaving || isLoadingInitialData}
-                  size="sm"
-                >
-                  {isProcessing ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <FileScan className="mr-1.5 h-4 w-4" />}
-                  Process New Image{selectedFiles.length > 1 ? 's' : ''}
-                </Button>
+      <div className={`flex flex-col lg:flex-row justify-start items-start gap-4 w-full`}>
+        {isLoadingInitialData ? (
+          <>
+            <LeftCardSkeleton />
+            <RightCardSkeleton />
+          </>
+        ) : (
+          <>
+            <Card className={`w-full lg:w-1/3 relative ${isAnyItemEditing ? 'opacity-70 pointer-events-none' : ''}`}>
+              <div className={`p-4 ${(isAnyItemEditing) ? 'opacity-50 pointer-events-none' : ''}`}>
+                <CardContent className="space-y-4 p-4 pt-2">
+                  {!currentMenuId && (initialImages.length + selectedFiles.length) < MAX_FILES && (
+                    <ImageDropzone
+                      onDrop={handleDrop}
+                      disabled={isAnyItemEditing}
+                    />
+                  )}
+                  {(initialImages.length + selectedFiles.length) >= MAX_FILES && !currentMenuId && (
+                    <p className="text-xs text-destructive text-center mt-1">Maximum {MAX_FILES} files reached.</p>
+                  )}
+                  {renderFileList()}
+                </CardContent>
               </div>
-            )}
+            </Card>
 
-            {!isLoadingInitialData && !isProcessing && !isSaving && !processingError && combinedMenuData && isPreviewReady && (
-              <div className="p-5 text-left flex flex-col flex-grow">
-                <div className="flex-grow mb-4 overflow-hidden">
-                  {renderMenuDetails(combinedMenuData)}
+            <Card className={`text-center border w-full lg:w-2/3 min-h-[230px] flex flex-col relative ${isAnyItemEditing ? 'opacity-70' : ''}`}>
+              {(isProcessing || isSaving) && (
+                <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="ml-2 text-sm text-muted-foreground">
+                    {isProcessing ? "Processando imagens..." : "Salvando menu..."}
+                  </p>
                 </div>
+              )}
+
+              <div className={`flex flex-col flex-grow transition-opacity duration-300 ${(isProcessing || isSaving) ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
+                {!isProcessing && !isSaving && processingError && (
+                  <CardContent className="py-12 flex flex-col items-center justify-center flex-grow">
+                    <XCircle className="h-16 w-16 text-destructive/70 mb-4" />
+                    <p className="text-destructive font-medium">Error Occurred</p>
+                    <p className="text-sm text-muted-foreground mt-1 px-4 break-words">{processingError}</p>
+                  </CardContent>
+                )}
+
+                {!isProcessing && !isSaving && !processingError && !combinedMenuData && initialImages.length === 0 && selectedFiles.length === 0 && (
+                  <CardContent className="py-12 flex flex-col items-center justify-center flex-grow">
+                    <UploadCloud className="h-16 w-16 text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground font-medium">Add menu images using the panel on the left.</p>
+                    <p className="text-sm text-muted-foreground mt-1">Start by uploading images for a new menu.</p>
+                  </CardContent>
+                )}
+
+                {!isProcessing && !isSaving && !processingError && selectedFiles.length > 0 && !isPreviewReady && (
+                  <div className="p-5 flex flex-col flex-grow items-center justify-center">
+                    <FileScan className="h-16 w-16 text-muted-foreground/70 mb-4" />
+                    <p className="font-medium text-muted-foreground">
+                      {selectedFiles.length} new file{selectedFiles.length > 1 ? 's added.' : ' added.'} Process to see preview.
+                    </p>
+                    <Button
+                      className="mt-4"
+                      onClick={processFilesForPreview}
+                      disabled={isProcessing || isSaving}
+                      size="sm"
+                    >
+                      {isProcessing ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <FileScan className="mr-1.5 h-4 w-4" />}
+                      Process New Image{selectedFiles.length > 1 ? 's' : ''}
+                    </Button>
+                  </div>
+                )}
+
+                {!isProcessing && !isSaving && !processingError && combinedMenuData && isPreviewReady && (
+                  <div className="p-5 text-left flex flex-col flex-grow">
+                    <div className="flex-grow mb-4 overflow-hidden">
+                      {renderMenuDetails(combinedMenuData)}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </Card>
+            </Card>
+          </>
+        )}
       </div>
+
       <ImagePreviewDialog
         isOpen={!!previewImage}
         onClose={() => setPreviewImage(null)}
