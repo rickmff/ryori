@@ -10,6 +10,7 @@ interface MenuItem {
 
 // Define the structure for the categorized menu
 interface StructuredMenu {
+  Menus?: MenuItem[];
   Aperitivos?: MenuItem[];
   Entradas?: MenuItem[];
   Principais?: MenuItem[];
@@ -36,6 +37,7 @@ interface ProcessResponse {
 // --- Helper function to merge multiple structured menus ---
 function mergeMenus(menus: StructuredMenu[]): StructuredMenu {
   const merged: StructuredMenu = {
+    Menus: [],
     Aperitivos: [],
     Entradas: [],
     Principais: [],
@@ -123,7 +125,7 @@ export async function POST(request: Request) {
 
     // Prepare the prompt
     const prompt = `Analyze the attached restaurant menu image.
-Extract the menu items and organize them into categories: "Aperitivos", "Entradas", "Principais", "Sobremesas", "Bebidas".
+Extract the menu items and organize them into categories: "Menus", "Aperitivos", "Entradas", "Principais", "Sobremesas", "Bebidas".
 If an item doesn't clearly fit into these categories, place it under "Outros".
 
 For each item, include:
@@ -133,6 +135,7 @@ For each item, include:
 
 Output the result as a valid JSON object following this structure:
 {
+  "Menus": [{ "name": "...", "description": "...", "price": "..." }, ...],
   "Aperitivos": [{ "name": "...", "description": "...", "price": "..." }, ...],
   "Entradas": [{ "name": "...", "description": "...", "price": "..." }, ...],
   "Principais": [{ "name": "...", "description": "...", "price": "..." }, ...],

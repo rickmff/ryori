@@ -244,7 +244,7 @@ export function ReservationForm({ whatsappNumber }: ReservationFormProps) {
   return (
     <div className="bg-card p-6 rounded-lg border">
       {/* Stepper */}
-      <div className="flex items-center justify-between mb-12">
+      <div className="flex items-center justify-between mb-6 border-b border-border/50 pb-6">
         {steps.map((s, idx) => {
           const Icon = s.icon;
           const isActive = idx === step;

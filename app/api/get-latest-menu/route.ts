@@ -12,6 +12,7 @@ interface MenuItem {
   price?: string;
 }
 interface StructuredMenu {
+  Menus?: MenuItem[];
   Aperitivos?: MenuItem[];
   Entradas?: MenuItem[];
   Principais?: MenuItem[];

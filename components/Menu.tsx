@@ -4,13 +4,16 @@ import { Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
+// Define MenuItem (consistent with MenuUploader)
+interface MenuItem {
+  name: string;
+  description?: string;
+  price?: string;
+}
+
+// Define StructuredMenu with correct index signature
 interface StructuredMenu {
-  [key: string]: {
-    map(arg0: (item: any) => import("react").JSX.Element): import("react").ReactNode
-    name: string;
-    description?: string;
-    price?: string;
-  }
+  [key: string]: MenuItem[] | undefined; // Maps string keys to arrays of MenuItem or undefined
 }
 
 interface ExistingImage {
@@ -83,41 +86,45 @@ export default function Menu() {
           <Loader2 className="h-10 w-10 animate-spin" />
         </div>
       ) : (
-        <div className="container mx-auto max-w-3xl p-6">
+        <div className="container mx-auto p-6">
           {menu && (
-            <Tabs defaultValue={Object.keys(menu)[0]} className="w-full border border-black rounded-lg p-6 bg-white/90">
-              <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-4 bg-transparent">
+            <Tabs defaultValue={Object.keys(menu)[0]} className="w-full p-6">
+              <TabsList className="flex flex-row justify-evenly gap-2 bg-transparent">
                 {Object.keys(menu).map((category) => (
                   category !== "Outros" && (
-                    <TabsTrigger key={category} value={category} className="bg-white/30 text-black data-[state=active]:text-black data-[state=active]:bg-white/80 data-[state=active]:border">
-                      {category === "Aperitivos" ? "Aperitivos" : category === "Entradas" ? "Entradas" : category === "PratoPrincipais" ? "Principais" : category === "Sobremesas" ? "Sobremesas" : category === "Bebidas" ? "Bebidas" : "Outros"}
+                    <TabsTrigger key={category} value={category} className="text-lg font-medium data-[state=active]:border-b-2 data-[state=active]:border-white tracking-wider">
+                      {category}
                     </TabsTrigger>
                   )
                 ))}
               </TabsList>
-              {Object.entries(menu).map(([category, items]) => (
-                <TabsContent key={category} value={category} className="mt-6">
-                  <ul>
-                    {items.map((item: any) => (
-                      <li
-                        key={item.name}
-                        className="p-2 flex"
-                      >
-                        <div className="flex-1 text-left">
-                          <h3 className="font-semibold text-sm text-black">{item.name}</h3>
-                          {item.description && (
-                            <p className="text-gray-600 text-xs mt-1">{item.description}</p>
-                          )}
-                        </div>
-                        <div className="flex-1 text-right">
-                          {item.price && (
-                            <p className="text-muted-foreground font-light text-xs">{item.price}</p>
-                          )}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </TabsContent>
+              {/* Ensure menu is not null before mapping */}
+              {menu && Object.entries(menu).map(([category, items]) => (
+                // Check if items is actually an array before mapping
+                items && (
+                  <TabsContent key={category} value={category} className="mt-6 border p-6">
+                    <ul>
+                      {items.map((item: MenuItem) => ( // Use MenuItem type
+                        <li
+                          key={item.name}
+                          className="p-2 flex tracking-wide"
+                        >
+                          <div className="w-2/3 text-left">
+                            <h3 className="font-medium text-md ">{item.name}</h3>
+                            {item.description && (
+                              <p className="text-muted-foreground text-xs mt-1">{item.description}</p>
+                            )}
+                          </div>
+                          <div className="w-1/3 text-right">
+                            {item.price && (
+                              <p className="text-muted-foreground font-light text-sm">{item.price}</p>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </TabsContent>
+                )
               ))}
             </Tabs>
           )}

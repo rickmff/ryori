@@ -41,6 +41,7 @@ interface MenuItem {
 
 // Define the structure for the categorized menu (consistent)
 interface StructuredMenu {
+  Menus?: MenuItem[];
   Aperitivos?: MenuItem[];
   Entradas?: MenuItem[];
   Principais?: MenuItem[];

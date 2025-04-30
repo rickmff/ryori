@@ -66,6 +66,7 @@ interface MenuItemStructure {
   price?: string;
 }
 interface StructuredMenu {
+  Menus?: MenuItemStructure[];
   Aperitivos?: MenuItemStructure[];
   Entradas?: MenuItemStructure[];
   Principais?: MenuItemStructure[];

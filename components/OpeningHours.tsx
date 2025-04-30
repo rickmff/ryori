@@ -88,7 +88,7 @@ export function OpeningHours() {
         <h3 className="font-medium">Horário</h3>
         {availability.length > 0 ? (
           availability.map((day) => (
-            <div key={day.id} className="flex gap-2 text-muted-foreground mt-1">
+            <div key={day.id} className="flex gap-2 text-muted-foreground mt-1 font-mono">
               <span className="w-8">{day.shortName}:</span>
               <span>
                 {day.enabled
