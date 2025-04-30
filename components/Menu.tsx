@@ -86,13 +86,13 @@ export default function Menu() {
           <Loader2 className="h-10 w-10 animate-spin" />
         </div>
       ) : (
-        <div className="container mx-auto p-6">
+        <div className="container mx-auto p-6 max-w-4xl">
           {menu && (
             <Tabs defaultValue={Object.keys(menu)[0]} className="w-full p-6">
               <TabsList className="flex flex-row justify-evenly gap-2 bg-transparent">
                 {Object.keys(menu).map((category) => (
                   category !== "Outros" && (
-                    <TabsTrigger key={category} value={category} className="text-lg font-medium data-[state=active]:border-b-2 data-[state=active]:border-white tracking-wider">
+                    <TabsTrigger key={category} value={category} className="text-lg font-medium data-[state=active]:border-b-2 data-[state=active]:border-white tracking-wider hover:bg-black/50 transition-all duration-300 hover:text-white">
                       {category}
                     </TabsTrigger>
                   )
@@ -115,7 +115,7 @@ export default function Menu() {
                               <p className="text-muted-foreground text-xs mt-1">{item.description}</p>
                             )}
                           </div>
-                          <div className="w-1/3 text-right">
+                          <div className="w-1/3 text-right font-mono">
                             {item.price && (
                               <p className="text-muted-foreground font-light text-sm">{item.price}</p>
                             )}

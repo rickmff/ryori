@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+import { getFirebaseAdmin } from '@/lib/firebaseAdmin'; // Import the initializer function
 
 // --- Ensure Firebase Admin is initialized ---
 // Example: import '@/lib/firebaseAdmin';
@@ -35,6 +36,9 @@ interface LatestMenuResponse {
 
 
 export async function GET(request: Request) {
+  // Ensure Firebase Admin is initialized
+  getFirebaseAdmin(); // Call the initialization function
+
   // Check Firebase Admin Initialization
   if (!admin.apps.length) {
     console.error("CRITICAL: Firebase Admin SDK not initialized before /api/get-latest-menu execution.");
