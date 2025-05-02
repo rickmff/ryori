@@ -13,13 +13,7 @@ interface MenuItem {
   price?: string;
 }
 interface StructuredMenu {
-  Menus?: MenuItem[];
-  Aperitivos?: MenuItem[];
-  Entradas?: MenuItem[];
-  Principais?: MenuItem[];
-  Sobremesas?: MenuItem[];
-  Bebidas?: MenuItem[];
-  Outros?: MenuItem[];
+  [key: string]: MenuItem[] | undefined; // Maps string keys to arrays of MenuItem or undefined
 }
 interface ProcessedImage {
   url: string;
@@ -32,6 +26,7 @@ interface LatestMenuResponse {
   createdAt: string; // ISO string
   menuData: StructuredMenu;
   processedImages: ProcessedImage[];
+  categoryOrder?: string[]; // Add the order array
 }
 
 
@@ -66,13 +61,29 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Latest menu data is incomplete." }, { status: 500 });
     }
 
+    // Reconstruct menuData based on categoryOrder
+    const rawMenuData = data.menuData as StructuredMenu || {};
+    // Get the saved order, or fall back to object keys if order is missing (e.g., old data)
+    const fetchedCategoryOrder = data.categoryOrder as string[] | undefined || Object.keys(rawMenuData);
+
+    // Build the menuData object in the correct order
+    const orderedMenuData: StructuredMenu = {};
+    for (const category of fetchedCategoryOrder) {
+      if (rawMenuData[category]) { // Check if the category exists in the raw data
+        orderedMenuData[category] = rawMenuData[category];
+      }
+    }
+
+    // Use orderedMenuData and include fetchedCategoryOrder in response
     const responsePayload: LatestMenuResponse = {
       id: latestDoc.id,
       createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
-      menuData: data.menuData as StructuredMenu,
+      menuData: orderedMenuData, // Use the reconstructed, ordered object
       processedImages: (data.processedImages || []) as ProcessedImage[],
+      categoryOrder: fetchedCategoryOrder, // Send the order array to the frontend
     };
 
+    console.log(`[API Get Latest] Sending menu ${responsePayload.id} with category order:`, responsePayload.categoryOrder);
     return NextResponse.json(responsePayload);
 
   } catch (error: any) {

@@ -22,12 +22,20 @@ interface ExistingImage {
   mimeType: string;
 }
 
+interface LatestMenuData {
+  id: string;
+  createdAt: string;
+  menuData: StructuredMenu;
+  processedImages: ExistingImage[];
+  categoryOrder?: string[]; // <-- Add categoryOrder (optional for backward compatibility)
+}
 
 export default function Menu() {
   const [isLoadingInitialData, setIsLoadingInitialData] = useState(true);
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [currentMenuId, setCurrentMenuId] = useState<string | null>(null);
   const [menu, setMenu] = useState<StructuredMenu | null>(null);
+  const [categoryOrder, setCategoryOrder] = useState<string[] | null>(null); // <-- Add state for order
   const [initialImages, setInitialImages] = useState<ExistingImage[]>([]);
   const [isPreviewReady, setIsPreviewReady] = useState(false);
   const [showScrollIndicator, setShowScrollIndicator] = useState(true);
@@ -57,7 +65,6 @@ export default function Menu() {
 
         if (response.status === 404) {
           console.log("No existing menu found. Ready for new upload.");
-          // No data to load, component is ready for new upload
           setIsLoadingInitialData(false);
           return;
         }
@@ -67,26 +74,25 @@ export default function Menu() {
           throw new Error(errorData.error || `Failed to fetch latest menu (Status: ${response.status})`);
         }
 
-        // Type definition matching /api/get-latest-menu response
-        interface LatestMenuData {
-          id: string;
-          createdAt: string;
-          menuData: StructuredMenu;
-          processedImages: ExistingImage[];
-        }
-
         const data: LatestMenuData = await response.json();
 
+        const fetchedMenuData = data.menuData || {};
+        const fetchedCategoryOrder = data.categoryOrder || Object.keys(fetchedMenuData); // Fallback if order is missing
+
         setCurrentMenuId(data.id);
-        setMenu(data.menuData);
-        setActiveCategory(Object.keys(data.menuData)[0]);
+        setMenu(fetchedMenuData);
+        setCategoryOrder(fetchedCategoryOrder); // Store the order
+        if (fetchedCategoryOrder.length > 0) {
+          setActiveCategory(fetchedCategoryOrder[0]);
+        } else {
+          setActiveCategory(""); // Handle empty menu case
+        }
         setInitialImages(data.processedImages || []); // Store existing images
         setIsPreviewReady(true); // Show the preview section immediately
 
       } catch (error: any) {
         console.error("Error fetching initial menu data:", error);
         setProcessingError(`Failed to load existing menu: ${error.message}`);
-        // Keep loading false, show error state
       } finally {
         setIsLoadingInitialData(false);
       }
@@ -131,6 +137,13 @@ export default function Menu() {
     </div>
   )
 
+  // --- EDIT: Determine ordered keys for rendering ---
+  // Use the state variable, fallback to Object.keys if state is null/empty or menu is null
+  const orderedCategories = categoryOrder && categoryOrder.length > 0
+    ? categoryOrder
+    : (menu ? Object.keys(menu) : []);
+  // --- END EDIT ---
+
   return (
     <div>
       {isLoadingInitialData ? (
@@ -143,9 +156,10 @@ export default function Menu() {
         </div>
       ) : (
         <div className="container mx-auto sm:p-6 sm:max-w-4xl w-full px-0">
-          {menu && (
+          {menu && orderedCategories.length > 0 && (
             <Tabs
-              defaultValue={Object.keys(menu)[0]}
+              value={activeCategory} // Controlled component using state
+              defaultValue={orderedCategories[0]} // Initial default if needed
               className="w-full pt-6 sm:p-6"
               onValueChange={handleTabChange}
             >
@@ -155,17 +169,15 @@ export default function Menu() {
                   onScroll={handleTabsScroll}
                 >
                   <TabsList className="bg-transparent">
-                    {Object.keys(menu).map((category) => (
-                      category !== "Outros" && (
-                        <div key={category}>
-                          <TabsTrigger
-                            value={category}
-                            className="text-sm sm:text-lg font-medium data-[state=active]:border-b-2 data-[state=active]:border-white tracking-wider hover:bg-black/50 transition-all duration-300 hover:text-white whitespace-nowrap px-3 py-1.5 sm:px-4 sm:py-2"
-                          >
-                            {category}
-                          </TabsTrigger>
-                        </div>
-                      )
+                    {orderedCategories.map((category) => (
+                      <div key={category}>
+                        <TabsTrigger
+                          value={category}
+                          className="text-sm sm:text-lg font-medium data-[state=active]:border-b-2 data-[state=active]:border-white tracking-wider hover:bg-black/50 transition-all duration-300 hover:text-white whitespace-nowrap px-3 py-1.5 sm:px-4 sm:py-2"
+                        >
+                          {category}
+                        </TabsTrigger>
+                      </div>
                     ))}
                   </TabsList>
                 </div>
@@ -181,11 +193,12 @@ export default function Menu() {
                   </div>
                 )}
               </div>
-              {menu && Object.entries(menu).map(([category, items]) => (
-                items && category === activeCategory && (
+              {menu && orderedCategories.map((category) => {
+                const items = menu[category]; // Get items for the current category
+                return items && (
                   <TabsContent key={category} value={category} className="mt-6 border p-4 sm:p-6">
                     <ul>
-                      {items.map((item: MenuItem, index) => (
+                      {items.map((item: MenuItem) => (
                         <li
                           key={item.name}
                           className="p-2 flex flex-row tracking-wide gap-2 sm:gap-0 border-b last:border-b-0 hover:bg-black/5 transition-colors duration-200"
@@ -205,9 +218,15 @@ export default function Menu() {
                       ))}
                     </ul>
                   </TabsContent>
-                )
-              ))}
+                );
+              })}
             </Tabs>
+          )}
+          {menu && orderedCategories.length === 0 && !isLoadingInitialData && !processingError && (
+            <div className="text-center text-muted-foreground py-10">O menu está vazio.</div>
+          )}
+          {!menu && !isLoadingInitialData && !processingError && (
+            <div className="text-center text-muted-foreground py-10">Nenhum menu encontrado.</div>
           )}
         </div>
       )}

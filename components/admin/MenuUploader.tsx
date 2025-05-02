@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/select";
 import { Input } from '@/components/ui/input';
 import { Label } from "@/components/ui/label";
-import Image from 'next/image';
 import { Separator } from "@/components/ui/separator";
 import {
   Popover,
@@ -356,11 +355,13 @@ function RightCardSkeleton() {
 function SortableTabsTrigger({
   category,
   categoryDisplayName,
-  isDisabled
+  isDisabled,
+  onDeleteCategory
 }: {
   category: string;
   categoryDisplayName: string;
   isDisabled: boolean;
+  onDeleteCategory: (category: string) => void;
 }) {
   const {
     attributes,
@@ -379,17 +380,31 @@ function SortableTabsTrigger({
   };
 
   return (
-    <TabsTrigger
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      value={category}
-      className={`text-sm px-2 py-1.5 hover:bg-black/50 transition-colors duration-300 ${isDragging ? 'border-dashed border-primary' : ''}`}
-      disabled={isDisabled}
-    >
-      {categoryDisplayName}
-    </TabsTrigger>
+    <div className="relative group">
+      <TabsTrigger
+        ref={setNodeRef}
+        style={style}
+        {...attributes}
+        {...listeners}
+        value={category}
+        className={`text-sm px-2 py-1.5 w-full hover:bg-black/50 transition-colors duration-300 ${isDragging ? 'border-dashed border-primary' : ''}`}
+        disabled={isDisabled}
+      >
+        {categoryDisplayName}
+      </TabsTrigger>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDeleteCategory(category);
+        }}
+        disabled={isDisabled}
+      >
+        <XCircle className="h-3 w-3" />
+      </Button>
+    </div>
   );
 }
 
@@ -559,13 +574,17 @@ export default function MenuUploader() {
       if (!menu1 && !menu2) return true;
       if (!menu1 || !menu2) return false;
 
+      // Deep copy to avoid modifying original state during comparison (optional but safer)
       const menu1Copy = JSON.parse(JSON.stringify(menu1));
       const menu2Copy = JSON.parse(JSON.stringify(menu2));
 
-      const keys1 = Object.keys(menu1Copy).sort();
-      const keys2 = Object.keys(menu2Copy).sort();
+      // --- EDIT: Remove .sort() to compare category order ---
+      const keys1 = Object.keys(menu1Copy);
+      const keys2 = Object.keys(menu2Copy);
+      // --- END EDIT ---
 
       if (keys1.length !== keys2.length || !keys1.every((key, index) => key === keys2[index])) {
+        console.log("[menusAreEqual] Category keys differ in length or order."); // Debug log
         return false;
       }
 
@@ -574,20 +593,24 @@ export default function MenuUploader() {
         const items2 = menu2Copy[key] || [];
 
         if (items1.length !== items2.length) {
+          console.log(`[menusAreEqual] Item count differs in category '${key}'.`); // Debug log
           return false;
         }
 
         for (let i = 0; i < items1.length; i++) {
           const item1 = items1[i];
           const item2 = items2[i];
+          // Compare relevant fields including ID to ensure order and content match
           if (item1.id !== item2.id ||
             item1.name !== item2.name ||
             (item1.description || '') !== (item2.description || '') ||
             (item1.price || '') !== (item2.price || '')) {
+            console.log(`[menusAreEqual] Item at index ${i} in category '${key}' differs.`); // Debug log
             return false;
           }
         }
       }
+      console.log("[menusAreEqual] Menus are considered equal."); // Debug log
       return true;
     };
 
@@ -595,9 +618,13 @@ export default function MenuUploader() {
     let menuHasChanged = false;
     if (combinedMenuData || initialMenuOrder) {
       menuHasChanged = !menusAreEqual(combinedMenuData, initialMenuOrder);
+      // Debug log to see the result of the comparison
+      console.log(`[useEffect hasChanges] menusAreEqual result: ${!menuHasChanged}, hasNewFiles: ${hasNewFiles}`);
     }
 
     setHasChanges(hasNewFiles || menuHasChanged);
+    // Log the final state of hasChanges
+    console.log(`[useEffect hasChanges] Setting hasChanges to: ${hasNewFiles || menuHasChanged}`);
 
   }, [selectedFiles.length, combinedMenuData, initialMenuOrder]);
 
@@ -863,8 +890,16 @@ export default function MenuUploader() {
     setProcessingError(null);
 
     const menuDataForBackend: BackendStructuredMenu = {};
+    let categoryOrderForBackend: string[] = [];
+
     if (combinedMenuData) {
-      for (const category in combinedMenuData) {
+      // Get keys in their current order from the state object
+      categoryOrderForBackend = Object.keys(combinedMenuData) as MenuCategory[];
+      console.log("[Save Flow] Determined category order:", categoryOrderForBackend); // Log the explicit order
+
+      // Build the menu data object (key order doesn't matter here)
+      for (const category of categoryOrderForBackend) {
+        // Map items, removing the frontend 'id'
         menuDataForBackend[category] = (combinedMenuData[category] || []).map(({ id, ...rest }) => rest);
       }
     }
@@ -878,25 +913,30 @@ export default function MenuUploader() {
         }))
       );
 
+      // --- EDIT: Add categoryOrder back to payload ---
       const payload = currentMenuId
-        ? {
+        ? { // Update payload
           menuId: currentMenuId,
-          updatedMenuData: menuDataForBackend || {},
+          updatedMenuData: menuDataForBackend || {}, // The data object
+          categoryOrder: categoryOrderForBackend,    // <-- Send the explicit order array
         }
-        : {
-          menuData: menuDataForBackend || {},
-          images: newImageDatas
+        : { // Create payload
+          menuData: menuDataForBackend || {},      // The data object
+          images: newImageDatas,                   // Image data
+          categoryOrder: categoryOrderForBackend,  // <-- Send the explicit order array
         };
+      // --- END EDIT ---
 
       const endpoint = currentMenuId ? '/api/update-menu' : '/api/save-menu';
       const method = currentMenuId ? 'PUT' : 'POST';
 
       console.log(`Saving menu (${currentMenuId ? 'Update' : 'Create'}) to ${endpoint}...`);
+      console.log(`Full Payload (with categoryOrder):`, JSON.stringify(payload, null, 2)); // Log the payload
 
       const response = await fetch(endpoint, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload), // Send the payload
       });
 
       let saveData: SaveResponse;
@@ -914,10 +954,12 @@ export default function MenuUploader() {
         });
       }
 
-      if (response.status === 204) {
+      // Handle potential 204 No Content for updates
+      if (response.status === 204 && currentMenuId) {
         console.log("Update successful (204 No Content).");
         saveData = {
           menuId: currentMenuId!,
+          // Assuming initialImages holds the correct URLs after an update
           imageUrls: initialImages.map(img => img.url),
           message: "Menu atualizado com sucesso.",
         };
@@ -926,6 +968,7 @@ export default function MenuUploader() {
           saveData = await response.json();
         } catch (jsonError) {
           console.error("Failed to parse success response JSON:", jsonError, "Response status:", response.status);
+          // Attempt to construct a fallback response
           saveData = {
             menuId: currentMenuId || (jsonError as any)?.menuId || '',
             imageUrls: initialImages.map(img => img.url),
@@ -946,46 +989,46 @@ export default function MenuUploader() {
         duration: saveData.message?.includes('failed to upload') ? 7000 : 5000,
       });
 
-      const newlySavedMenuData = combinedMenuData;
+      const newlySavedMenuData = combinedMenuData; // Capture state before clearing files
 
-      if (!currentMenuId && saveData.menuId) {
+      // Update state after successful save/update
+      if (!currentMenuId && saveData.menuId) { // If it was a CREATE operation
         console.log("[Save Flow - Create] Setting currentMenuId to:", saveData.menuId);
         setCurrentMenuId(saveData.menuId);
-      } else if (currentMenuId) {
-        console.log("[Save Flow - Update] Preserving existing currentMenuId:", currentMenuId);
-      } else {
-        console.warn("[Save Flow - Create] No menuId received in save response.");
-      }
 
-      if (!currentMenuId && saveData.menuId) {
         const responseImageUrls = saveData.imageUrls ?? [];
         console.log("[Save Flow - Create] Processing responseImageUrls:", responseImageUrls);
         const updatedInitialImages: ExistingImage[] = responseImageUrls.map(url => {
+          // Logic to map URL back to original file info (if possible/needed)
           const originalFile = selectedFiles.find(f => {
             try { return url.includes(encodeURIComponent(f.name)); } catch { return false; }
           });
           const filename = originalFile?.name || url.substring(url.lastIndexOf('/') + 1).split('?')[0];
-          const mimeType = originalFile?.type || 'image/jpeg';
+          const mimeType = originalFile?.type || 'image/jpeg'; // Default or determine mime type
           return { url, originalFilename: filename, mimeType };
         });
         console.log("[Save Flow - Create] Setting initialImages:", updatedInitialImages);
         setInitialImages(updatedInitialImages);
-        setSelectedFiles([]);
+        setSelectedFiles([]); // Clear selected files after successful save
         setFilePreviews(new Map());
-      } else if (currentMenuId) {
+      } else if (currentMenuId) { // If it was an UPDATE operation
+        console.log("[Save Flow - Update] Preserving existing currentMenuId:", currentMenuId);
         console.log("[Save Flow - Update] Keeping existing initialImages. Current value:", initialImages);
-        setSelectedFiles([]);
+        setSelectedFiles([]); // Clear selected files after successful update
         setFilePreviews(new Map());
+      } else {
+        console.warn("[Save Flow - Create] No menuId received in save response.");
       }
 
       console.log("[Save Flow - Common] Setting initialMenuOrder to current combinedMenuData (with IDs).");
+      // This ensures the 'compare' state matches the just-saved state
       setInitialMenuOrder(newlySavedMenuData);
 
       console.log("[Save Flow - Common] Resetting hasChanges, processing flags.");
-      setHasChanges(false);
-      setIsPreviewReady(true);
+      setHasChanges(false); // Reset changes flag
+      setIsPreviewReady(true); // Keep preview ready
       setProcessingError(null);
-      setIsProcessing(false);
+      setIsProcessing(false); // Ensure processing indicator stops
 
     } catch (error: any) {
       console.error("Saving error:", error);
@@ -1250,7 +1293,48 @@ export default function MenuUploader() {
       return newMenu;
     });
 
+    // Make sure we're not in an editing state after drag
+    setIsAnyItemEditing(false);
     setHasChanges(true);
+  };
+
+  // Add a new handler for category deletion
+  const handleDeleteCategory = (category: MenuCategory) => {
+    if (!combinedMenuData) return;
+
+    const itemsInCategory = combinedMenuData[category]?.length || 0;
+
+    // Confirm deletion with the user
+    if (itemsInCategory > 0 && !window.confirm(`Are you sure you want to delete the category "${category}" and all ${itemsInCategory} items inside it?`)) {
+      return;
+    }
+
+    console.log(`[Delete Category] Deleting category '${category}' with ${itemsInCategory} items`);
+
+    setCombinedMenuData(prev => {
+      if (!prev) return null;
+
+      const newState = { ...prev };
+      delete newState[category];
+
+      // If we're deleting the active tab, switch to another tab
+      if (activeTab === category) {
+        const remainingCategories = Object.keys(newState);
+        if (remainingCategories.length > 0) {
+          setActiveTab(remainingCategories[0] as MenuCategory);
+        } else {
+          setActiveTab(undefined);
+        }
+      }
+
+      return newState;
+    });
+
+    setHasChanges(true);
+    toast({
+      title: "Category Deleted",
+      description: `Category "${category}" and all its items have been removed.`
+    });
   };
 
   const renderMenuDetails = (menuData: StructuredMenu | null) => {
@@ -1304,6 +1388,7 @@ export default function MenuUploader() {
                     category={category}
                     categoryDisplayName={categoryDisplayNames[category] || category}
                     isDisabled={isAnyItemEditing}
+                    onDeleteCategory={handleDeleteCategory}
                   />
                 ))}
               </SortableContext>
@@ -1469,7 +1554,6 @@ export default function MenuUploader() {
                   }}
                   disabled={isProcessing || isSaving || isLoadingInitialData}
                 >
-                  <XCircle className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
             ))}
@@ -1735,7 +1819,7 @@ export default function MenuUploader() {
       <ImagePreviewDialog
         isOpen={!!previewImage}
         onClose={() => setPreviewImage(null)}
-        imageUrl={previewImage?.url || ''}
+        imageUrl={previewImage?.url || null}
         altText={previewImage?.alt || ''}
       />
     </div>
