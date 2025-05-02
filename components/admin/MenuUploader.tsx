@@ -9,8 +9,8 @@ import { Loader2, XCircle, List as ListIcon, UploadCloud, FileScan, Save, Trash2
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { v4 as uuidv4 } from 'uuid';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
   Select,
@@ -205,14 +205,14 @@ function DraggableMenuItem({
                   </p>
                 )}
               </div>
-              <div className="flex items-center flex-shrink-0 gap-1">
+              <div className="flex items-center flex-shrink-0 gap-1 max-w-32 overflow-hidden">
                 {item.price && (
-                  <p className="font-medium whitespace-nowrap text-sm mr-1">{item.price}</p>
+                  <p className="font-medium text-xs sm:text-sm">{item.price}</p>
                 )}
               </div>
             </div>
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-dashed mt-2">
-              <span className="text-xs text-muted-foreground">Categoria:</span>
+              <span className="text-xs text-muted-foreground hidden sm:inline">Categoria:</span>
               <Select
                 value={currentCategory}
                 onValueChange={(newCategoryValue) => onCategoryChange(itemId, currentCategory, newCategoryValue as MenuCategory)}
@@ -227,9 +227,10 @@ function DraggableMenuItem({
                 onClick={handleStartEdit}
                 aria-label="Edit item"
                 disabled={disableActions}
+                size="sm"
               >
-                <Pencil className="h-4 w-4" />
-                Editar
+                <Pencil className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Editar</span>
               </Button>
               <Button
                 variant="outline"
@@ -237,9 +238,10 @@ function DraggableMenuItem({
                 onClick={(e) => { e.stopPropagation(); onDeleteItem(itemId, currentCategory); }}
                 aria-label="Delete item"
                 disabled={disableActions}
+                size="sm"
               >
-                <Trash2 className="h-4 w-4" />
-                Remover
+                <Trash2 className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Remover</span>
               </Button>
             </div>
           </>
@@ -349,6 +351,47 @@ function RightCardSkeleton() {
 }
 
 // --- End Skeleton Components ---
+
+// Add a new SortableTabsTrigger component
+function SortableTabsTrigger({
+  category,
+  categoryDisplayName,
+  isDisabled
+}: {
+  category: string;
+  categoryDisplayName: string;
+  isDisabled: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: category });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : 'auto',
+  };
+
+  return (
+    <TabsTrigger
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      value={category}
+      className={`text-sm px-2 py-1.5 hover:bg-black/50 transition-colors duration-300 ${isDragging ? 'border-dashed border-primary' : ''}`}
+      disabled={isDisabled}
+    >
+      {categoryDisplayName}
+    </TabsTrigger>
+  );
+}
 
 export default function MenuUploader() {
   // --- Existing State ---
@@ -1166,6 +1209,50 @@ export default function MenuUploader() {
     setIsAnyItemEditing(isEditing);
   };
 
+  // Add a new handler for category reordering
+  const handleCategoryDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || !combinedMenuData) return;
+    if (active.id === over.id) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    console.log(`[Category DragEnd] Reordering categories. Moving ${activeId} to position of ${overId}.`);
+
+    setCombinedMenuData(prev => {
+      if (!prev) return null;
+
+      // Get all category keys in their current order
+      const categoryKeys = Object.keys(prev);
+
+      // Find the indices of the categories being moved
+      const oldIndex = categoryKeys.indexOf(activeId);
+      const newIndex = categoryKeys.indexOf(overId);
+
+      if (oldIndex === -1 || newIndex === -1) {
+        console.error("Could not find categories by ID during reorder.");
+        return prev;
+      }
+
+      // Create a new array with the reordered categories
+      const newCategoryKeys = [...categoryKeys];
+      const [removed] = newCategoryKeys.splice(oldIndex, 1);
+      newCategoryKeys.splice(newIndex, 0, removed);
+
+      // Create a new menu object with the reordered categories
+      const newMenu: StructuredMenu = {};
+      newCategoryKeys.forEach(key => {
+        newMenu[key] = prev[key];
+      });
+
+      return newMenu;
+    });
+
+    setHasChanges(true);
+  };
+
   const renderMenuDetails = (menuData: StructuredMenu | null) => {
     if (!menuData) {
       return <p className="text-muted-foreground p-4 text-center">Loading menu data or no data available...</p>;
@@ -1198,17 +1285,30 @@ export default function MenuUploader() {
       <Tabs
         value={activeTab || ''}
         onValueChange={(value) => setActiveTab(value as MenuCategory)}
-        className="w-full px-2"
+        className="w-full"
       >
         <div className="flex items-center gap-2 mb-3 px-4">
-          <TabsList className="grid flex-grow grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 h-auto">
-            {allCategoryKeys
-              .map((category) => (
-                <TabsTrigger key={category} value={category} className="text-sm px-2 py-1.5 hover:bg-black/50 transition-colors duration-300" disabled={isAnyItemEditing}>
-                  {categoryDisplayNames[category] || category}
-                </TabsTrigger>
-              ))}
-          </TabsList>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleCategoryDragEnd}
+          >
+            <TabsList className="grid flex-grow grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 h-auto">
+              <SortableContext
+                items={allCategoryKeys}
+                strategy={horizontalListSortingStrategy}
+              >
+                {allCategoryKeys.map((category) => (
+                  <SortableTabsTrigger
+                    key={category}
+                    category={category}
+                    categoryDisplayName={categoryDisplayNames[category] || category}
+                    isDisabled={isAnyItemEditing}
+                  />
+                ))}
+              </SortableContext>
+            </TabsList>
+          </DndContext>
           <Popover open={isNewCategoryPopoverOpen} onOpenChange={setIsNewCategoryPopoverOpen}>
             <PopoverTrigger asChild>
               <Button variant="ghost" size="sm" className="px-2 flex-shrink-0" disabled={isAnyItemEditing}>
@@ -1236,7 +1336,7 @@ export default function MenuUploader() {
         </div>
         {allCategoryKeys.map((category) => (
           <TabsContent key={category} value={category} className="mt-0 relative">
-            <ScrollArea className="h-full min-h-[300px]">
+            <div className="h-full min-h-[300px]">
               <div className="p-4 space-y-3">
                 {addItemFormCategory !== category && (
                   <Button
@@ -1327,7 +1427,7 @@ export default function MenuUploader() {
                   addItemFormCategory !== category && <p className="text-sm text-muted-foreground text-center py-8">This category is empty. Add an item above.</p>
                 )}
               </div>
-            </ScrollArea>
+            </div>
           </TabsContent>
         ))}
       </Tabs>
@@ -1620,7 +1720,7 @@ export default function MenuUploader() {
                 )}
 
                 {!isProcessing && !isSaving && !processingError && combinedMenuData && isPreviewReady && (
-                  <div className="p-5 text-left flex flex-col flex-grow">
+                  <div className="p-4 text-left flex flex-col flex-grow">
                     <div className="flex-grow mb-4 overflow-hidden">
                       {renderMenuDetails(combinedMenuData)}
                     </div>
