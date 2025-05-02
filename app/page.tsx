@@ -1,3 +1,5 @@
+"use client";
+import { useEffect } from "react";
 import Image from "next/image"
 import { MapPin, Phone } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -5,11 +7,32 @@ import { ReservationForm } from "@/components/ReservationForm"
 import Script from 'next/script'
 import Menu from "@/components/Menu"
 import { OpeningHours } from "@/components/OpeningHours"
+import { smoothScroll } from "@/app/utils/smoothScroll";
 
 export default function RestaurantePage() {
   const whatsappNumber = process.env.WHATSAPP_NUMBER || "351928149095"
   const restaurantUrl = "https://ryori.pt"
   const imageUrl = `${restaurantUrl}/ryori-hero.jpg`
+
+  // Add event listeners for smooth scrolling
+  useEffect(() => {
+    const handleAnchorClick = (e: React.MouseEvent<HTMLAnchorElement> | MouseEvent) => {
+      const target = (e.target as HTMLElement).closest('a[href^="#"]');
+      if (!target) return;
+
+      const targetId = target.getAttribute('href')?.substring(1);
+      if (targetId) {
+        e.preventDefault();
+        smoothScroll(targetId, 500); // 2000ms = 2 seconds for scroll duration
+      }
+    };
+
+    document.addEventListener('click', handleAnchorClick);
+
+    return () => {
+      document.removeEventListener('click', handleAnchorClick);
+    };
+  }, []);
 
   const restaurantSchema = {
     "@context": "https://schema.org",

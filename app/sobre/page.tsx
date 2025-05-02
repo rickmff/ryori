@@ -1,6 +1,14 @@
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+
 export default function Sobre() {
   return (
     <div className="container py-16 space-y-8">
+      <div className="flex flex-col items-center justify-center">
+        <Link href="/" className="absolute top-28 left-1/4">
+          <ArrowLeft className="w-6 h-6" />
+        </Link>
+      </div>
       <h1 className="text-4xl font-bold text-center mb-12">Sobre o Ryōri</h1>
       <article className="space-y-10 max-w-3xl mx-auto">
         <section>
