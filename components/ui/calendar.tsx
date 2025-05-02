@@ -70,14 +70,14 @@ function Calendar({
         ),
         nav_button_next: "absolute right-1",
         table: "w-full border-collapse space-y-1",
-        head_row: "flex w-full",
+        head_row: "flex w-full mb-4",
         head_cell:
           "text-muted-foreground rounded-md font-normal text-[0.8rem] flex-1",
         row: "flex w-full mt-2",
-        cell: "flex-1 h-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+        cell: "flex-1 h-12 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
         day: cn(
-          buttonVariants({ variant: "ghost" }),
-          "h-9 w-full p-0 font-normal aria-selected:opacity-100 rounded-lg"
+          buttonVariants({ variant: "ghost", className: "text-lg" }),
+          "h-9 w-full font-normal aria-selected:opacity-100 rounded-lg"
         ),
         day_range_end: "day-range-end",
         day_selected:

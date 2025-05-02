@@ -192,7 +192,7 @@ export default function Menu() {
                           className="p-2 flex flex-row tracking-wide gap-2 sm:gap-0 border-b last:border-b-0 hover:bg-black/5 transition-colors duration-200"
                         >
                           <div className="w-full sm:w-2/3 text-left flex-0">
-                            <h3 className="font-medium sm:text-md text-sm">{item.name}</h3>
+                            <h3 className="font-medium sm:text-lg text-sm mb-2">{item.name}</h3>
                             {item.description && (
                               <p className="text-muted-foreground sm:text-xs text-xs text-mt-1">{item.description}</p>
                             )}
