@@ -49,7 +49,7 @@ export function NavBar() {
             </motion.a>
           ))}
           <Button asChild size="sm" className="bg-black text-white hover:bg-black/50 transition-all duration-300">
-            <a href="#Reservations">Reservar Mesa</a>
+            <a href="#reservations">Reservar Mesa</a>
           </Button>
         </nav>
 

@@ -69,7 +69,7 @@ export default function RestaurantePage() {
             </div>
           </section>
 
-          <section id="Reservations" className="py-16">
+          <section id="reservations" className="py-16">
             <div className="container sm:max-w-2xl max-w-full">
               <div className="text-center mb-12">
                 <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-wide">Faça sua Reserva</h2>
