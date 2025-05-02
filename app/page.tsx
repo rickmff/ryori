@@ -129,7 +129,7 @@ export default function RestaurantePage() {
                     <OpeningHours />
 
                     <Button variant="outline" className="w-full sm:w-auto sm:ml-8" asChild>
-                      <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer">
+                      <a href="https://maps.app.goo.gl/iHR9UKvxR8pQEbvR7" target="_blank" rel="noopener noreferrer">
                         Ver no Google Maps
                       </a>
                     </Button>
