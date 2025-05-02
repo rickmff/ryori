@@ -4,16 +4,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CalendarDays, UtensilsCrossed } from "lucide-react"
 import AvailabilityEditor from "@/components/admin/AvailabilityEditor"
 import MenuUploader from "@/components/admin/MenuUploader"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useState } from "react"
 
 export function AdminTabs() {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const currentTab = searchParams.get("tab") ?? "menu"
+  const [currentTab, setCurrentTab] = useState("menu")
 
   const handleValueChange = (value: string) => {
-    router.push(`${pathname}?tab=${value}`)
+    setCurrentTab(value)
   }
 
   return (

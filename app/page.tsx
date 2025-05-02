@@ -23,7 +23,7 @@ export default function RestaurantePage() {
       const targetId = target.getAttribute('href')?.substring(1);
       if (targetId) {
         e.preventDefault();
-        smoothScroll(targetId, 500); // 2000ms = 2 seconds for scroll duration
+        smoothScroll(targetId, 1000); // 2000ms = 2 seconds for scroll duration
       }
     };
 
