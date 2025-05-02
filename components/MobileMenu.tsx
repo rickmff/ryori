@@ -25,14 +25,14 @@ export function MobileMenu() {
           <a href="#menu" className="text-lg font-medium hover:underline underline-offset-4 py-2">
             Menu
           </a>
-          <a href="#reservas" className="text-lg font-medium hover:underline underline-offset-4 py-2">
+          <a href="#reservations" className="text-lg font-medium hover:underline underline-offset-4 py-2">
             Reservas
           </a>
           <a href="#local" className="text-lg font-medium hover:underline underline-offset-4 py-2">
             Localização
           </a>
           <Button className="mt-4 bg-black text-white hover:bg-black/50 transition-all duration-300" asChild>
-            <a href="#reservas">Reservar Mesa</a>
+            <a href="#reservations">Reservar Mesa</a>
           </Button>
         </nav>
       </SheetContent>
