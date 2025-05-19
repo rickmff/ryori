@@ -5,6 +5,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function Gallery() {
+  // State to track all available images
+  const [allImages, setAllImages] = useState<number[]>([]);
+  const [displayedImages, setDisplayedImages] = useState<number[]>([]);
   // State to track the current set of images
   const [imageIndices, setImageIndices] = useState<number[]>([]);
   // State to track the next image that will appear
@@ -19,17 +22,60 @@ export default function Gallery() {
   const totalImages = 22;
   const startIndex = 10; // Your images start at index 10
 
-  // Initialize random images on first render
+  // Initialize all available images and displayed images on first render
   useEffect(() => {
-    const initialIndices: SetStateAction<number[]> = [];
+    // Create array of all possible image numbers
+    const allPossibleImages = Array.from(
+      { length: totalImages },
+      (_, i) => i + startIndex
+    );
+    setAllImages(allPossibleImages);
+
+    // Select initial random images for display
+    const initialIndices: number[] = [];
     while (initialIndices.length < 8) {
       const randomNum = Math.floor(Math.random() * totalImages) + startIndex;
       if (!initialIndices.includes(randomNum)) {
         initialIndices.push(randomNum);
       }
     }
+    setDisplayedImages(initialIndices);
     setImageIndices(initialIndices);
   }, []);
+
+  // Modified effect to change images only when gallery is closed
+  useEffect(() => {
+    if (imageIndices.length < 8 || galleryOpen) return; // Don't run if gallery is open
+
+    const intervalId = setInterval(() => {
+      const positionToChange = Math.floor(Math.random() * 8);
+      const newImageNum = getNewRandomImage();
+
+      setFadingIndex(positionToChange);
+      setNextImage(newImageNum);
+
+      setTimeout(() => {
+        setDisplayedImages(prev => {
+          const newIndices = [...prev];
+          newIndices[positionToChange] = newImageNum;
+          return newIndices;
+        });
+        setImageIndices(prev => {
+          const newIndices = [...prev];
+          newIndices[positionToChange] = newImageNum;
+          return newIndices;
+        });
+
+        setTimeout(() => {
+          setFadingIndex(null);
+          setNextImage(null);
+        }, 100);
+      }, 500);
+
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [imageIndices, galleryOpen]);
 
   // Function to get a new random image that's not currently displayed
   const getNewRandomImage = () => {
@@ -48,68 +94,40 @@ export default function Gallery() {
     return availableImages[randomIndex];
   };
 
-  // Effect to change one image periodically
-  useEffect(() => {
-    if (imageIndices.length < 8) return; // Wait until we have a full set
-
-    const intervalId = setInterval(() => {
-      // Select a random position to change (0-7)
-      const positionToChange = Math.floor(Math.random() * 8);
-      // Prepare the next image that will appear
-      const newImageNum = getNewRandomImage();
-
-      // Set up the transition
-      setFadingIndex(positionToChange);
-      setNextImage(newImageNum);
-
-      // After fade out completes, update the image array
-      setTimeout(() => {
-        setImageIndices(prev => {
-          const newIndices = [...prev];
-          newIndices[positionToChange] = newImageNum;
-          return newIndices;
-        });
-
-        // Reset states after transition completes
-        setTimeout(() => {
-          setFadingIndex(null);
-          setNextImage(null);
-        }, 100);
-      }, 500); // Match this with the CSS transition duration
-
-    }, 1000); // Change one image every second
-
-    return () => clearInterval(intervalId);
-  }, [imageIndices]);
-
-  // Function to handle gallery navigation
+  // Modified navigation function to use all images
   const navigateGallery = (direction: 'next' | 'prev') => {
     if (direction === 'next') {
-      setCurrentImageIndex((prev) => (prev + 1) % imageIndices.length);
+      setCurrentImageIndex((prev) => (prev + 1) % totalImages);
     } else {
-      setCurrentImageIndex((prev) => (prev - 1 + imageIndices.length) % imageIndices.length);
+      setCurrentImageIndex((prev) => (prev - 1 + totalImages) % totalImages);
     }
   };
 
-  // Function to open gallery with specific image
+  // Modified gallery opening function
   const openGallery = (index: number) => {
-    setCurrentImageIndex(index);
+    const selectedImage = displayedImages[index];
+    // Convert the image number back to an index (0-based)
+    const actualIndex = selectedImage - startIndex;
+    setCurrentImageIndex(actualIndex);
     setGalleryOpen(true);
+  };
+
+  // Helper function to get the current image number
+  const getCurrentImageNumber = () => {
+    return startIndex + currentImageIndex;
   };
 
   return (
     <>
       {/* Gallery Dialog */}
       <Dialog open={galleryOpen} onOpenChange={setGalleryOpen}>
-        <DialogContent className="max-w-screen-lg w-full p-0 h-[90vh] max-h-[90vh] bg-black/95 border-none">
-          <DialogHeader>
-            <DialogTitle className="sr-only">Galeria de Imagens</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-4xl w-full m-4 p-6 h-[90vh] max-h-[90vh] bg-black/95 border-none" closeButton={false}>
+          <DialogTitle className="sr-only">Galeria de Imagens</DialogTitle>
           <div className="relative h-full flex items-center justify-center">
             {/* Close button */}
             <button
               onClick={() => setGalleryOpen(false)}
-              className="absolute top-4 right-4 z-50 text-white hover:text-gray-300 transition-colors"
+              className="absolute top-2 right-2 z-50 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
             >
               <X size={24} />
             </button>
@@ -117,26 +135,31 @@ export default function Gallery() {
             {/* Navigation buttons */}
             <button
               onClick={() => navigateGallery('prev')}
-              className="absolute left-4 z-40 text-white hover:text-gray-300 transition-colors"
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-40 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+              aria-label="Previous image"
             >
               <ChevronLeft size={36} />
             </button>
 
             <button
               onClick={() => navigateGallery('next')}
-              className="absolute right-4 z-40 text-white hover:text-gray-300 transition-colors"
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-40 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+              aria-label="Next image"
             >
               <ChevronRight size={36} />
             </button>
 
-            {/* Current image */}
+            {/* Modified current image display */}
             <div className="relative w-full h-full flex items-center justify-center">
-              <div className="relative w-full h-full max-h-[80vh] flex items-center justify-center">
+              <div
+                className="absolute inset-0 transition-opacity duration-300"
+              >
                 <Image
-                  src={`/gallery/IMG-20250514-WA00${imageIndices[currentImageIndex]}.jpg`}
+                  src={`/gallery/IMG-20250514-WA${getCurrentImageNumber().toString().padStart(4, '0')}.jpg`}
                   alt={`Imagem da galeria ${currentImageIndex + 1}`}
                   fill
                   className="object-contain"
+                  priority
                   onError={(e) => {
                     e.currentTarget.src = "/placeholder-image.jpg";
                   }}
@@ -144,18 +167,20 @@ export default function Gallery() {
               </div>
             </div>
 
-            {/* Image counter */}
-            <div className="absolute bottom-4 left-0 right-0 text-center text-white">
-              {currentImageIndex + 1} / {imageIndices.length}
+            {/* Modified image counter */}
+            <div className="absolute bottom-2 left-0 right-0 text-center">
+              <span className="px-4 py-2 rounded-full bg-black/50 text-white text-sm">
+                {currentImageIndex + 1} / {totalImages}
+              </span>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {imageIndices.map((imageNum, i) => (
+        {displayedImages.map((imageNum, i) => (
           <div
-            key={i}
+            key={`grid-${imageNum}-${i}`}
             className="relative aspect-square overflow-hidden rounded-lg group cursor-pointer"
             onClick={() => openGallery(i)}
           >
@@ -163,7 +188,7 @@ export default function Gallery() {
             {fadingIndex === i && nextImage && (
               <div className="absolute inset-0 z-10">
                 <Image
-                  src={`/gallery/IMG-20250514-WA00${nextImage}.jpg`}
+                  src={`/gallery/IMG-20250514-WA${nextImage.toString().padStart(4, '0')}.jpg`}
                   alt={`Nova imagem da galeria ${i + 1}`}
                   fill
                   className="object-cover"
@@ -176,11 +201,10 @@ export default function Gallery() {
 
             {/* Current image that fades out */}
             <div
-              className={`absolute inset-0 z-20 ${fadingIndex === i ? "transition-opacity duration-500 ease-in-out opacity-0" : ""
-                }`}
+              className={`absolute inset-0 z-20 ${fadingIndex === i ? "transition-opacity duration-500 ease-in-out opacity-0" : ""}`}
             >
               <Image
-                src={`/gallery/IMG-20250514-WA00${imageNum}.jpg`}
+                src={`/gallery/IMG-20250514-WA${imageNum.toString().padStart(4, '0')}.jpg`}
                 alt={`Imagem da galeria ${i + 1}`}
                 fill
                 className="object-cover transition-transform duration-1000 group-hover:scale-110"
