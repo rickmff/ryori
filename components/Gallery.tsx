@@ -17,6 +17,8 @@ export default function Gallery() {
   // Add state for gallery dialog
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  // Add state to track last changed position
+  const [lastChangedPosition, setLastChangedPosition] = useState<number | null>(null);
 
   // Total number of available images (10-31 based on your folder)
   const totalImages = 22;
@@ -43,53 +45,64 @@ export default function Gallery() {
     setImageIndices(initialIndices);
   }, []);
 
-  // Modified effect to change images only when gallery is closed
+  // Modified effect to prevent duplicates and consecutive changes
   useEffect(() => {
-    if (imageIndices.length < 8 || galleryOpen) return; // Don't run if gallery is open
+    if (imageIndices.length < 8 || galleryOpen) return;
 
     const intervalId = setInterval(() => {
-      const positionToChange = Math.floor(Math.random() * 8);
+      // Get a random position that wasn't the last one changed
+      let positionToChange;
+      do {
+        positionToChange = Math.floor(Math.random() * 8);
+      } while (positionToChange === lastChangedPosition);
+
+      // Get a new image that isn't currently displayed
       const newImageNum = getNewRandomImage();
 
-      setFadingIndex(positionToChange);
-      setNextImage(newImageNum);
-
-      setTimeout(() => {
-        setDisplayedImages(prev => {
-          const newIndices = [...prev];
-          newIndices[positionToChange] = newImageNum;
-          return newIndices;
-        });
-        setImageIndices(prev => {
-          const newIndices = [...prev];
-          newIndices[positionToChange] = newImageNum;
-          return newIndices;
-        });
+      if (newImageNum) {
+        setFadingIndex(positionToChange);
+        setNextImage(newImageNum);
+        setLastChangedPosition(positionToChange);
 
         setTimeout(() => {
-          setFadingIndex(null);
-          setNextImage(null);
-        }, 100);
-      }, 500);
+          setDisplayedImages(prev => {
+            const newIndices = [...prev];
+            newIndices[positionToChange] = newImageNum;
+            return newIndices;
+          });
+          setImageIndices(prev => {
+            const newIndices = [...prev];
+            newIndices[positionToChange] = newImageNum;
+            return newIndices;
+          });
 
+          setTimeout(() => {
+            setFadingIndex(null);
+            setNextImage(null);
+          }, 100);
+        }, 500);
+      }
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [imageIndices, galleryOpen]);
+  }, [imageIndices, galleryOpen, lastChangedPosition]);
 
-  // Function to get a new random image that's not currently displayed
+  // Modified function to get a new random image
   const getNewRandomImage = () => {
     const currentImages = new Set(imageIndices);
     const availableImages = [];
 
+    // Create array of available images that aren't currently displayed
     for (let i = startIndex; i < startIndex + totalImages; i++) {
       if (!currentImages.has(i)) {
         availableImages.push(i);
       }
     }
 
-    if (availableImages.length === 0) return startIndex; // Fallback
+    // If no available images, return null
+    if (availableImages.length === 0) return null;
 
+    // Get random image from available ones
     const randomIndex = Math.floor(Math.random() * availableImages.length);
     return availableImages[randomIndex];
   };
