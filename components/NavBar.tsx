@@ -14,6 +14,8 @@ export function NavBar() {
     setScrolled(latest > 50);
   });
 
+  const items = [{ label: "Sobre", href: "/sobre" }, { label: "Menu", href: "#menu" }, { label: "Location", href: "#location" }]
+
   return (
     <motion.header
       initial="initial"
@@ -29,23 +31,15 @@ export function NavBar() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex gap-6 tracking-wide items-center">
-          <motion.a
-            href="/sobre"
-            className="text-sm font-medium"
-            initial="rest"
-            whileHover="hover"
-          >
-            Sobre
-          </motion.a>
-          {["Menu", "Location"].map((item) => (
+          {items.map((item) => (
             <motion.a
-              key={item}
-              href={`/#${item.toLowerCase()}`}
-              className="text-sm font-medium"
+              key={item.label}
+              href={item.href}
+              className="text-md tracking-wider hover:opacity-80 hover:underline underline-offset-4 transition-all duration-500"
               initial="rest"
               whileHover="hover"
             >
-              {item}
+              {item.label}
             </motion.a>
           ))}
           <Button asChild size="sm" className="bg-black text-white hover:bg-black/50 transition-all duration-300">

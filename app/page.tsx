@@ -10,6 +10,7 @@ import { OpeningHours } from "@/components/OpeningHours"
 import { smoothScroll } from "@/app/utils/smoothScroll";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { X, ChevronLeft, ChevronRight } from "lucide-react"
+import Gallery from "@/components/Gallery";
 
 export default function RestaurantePage() {
   const whatsappNumber = process.env.WHATSAPP_NUMBER || "351928149095"
@@ -244,7 +245,7 @@ export default function RestaurantePage() {
             <div className="container sm:max-w-2xl max-w-full">
               <div className="text-center mb-12">
                 <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-wide">Faça sua Reserva</h2>
-                <p className="text-muted-foreground line-clamp-2 mx-auto max-w-xl">
+                <p className="text-muted-foreground line-clamp-2">
                   Reserve uma mesa e deixe o resto conosco.
                 </p>
               </div>
@@ -252,71 +253,26 @@ export default function RestaurantePage() {
             </div>
           </section>
 
-          <section id="menu" className="py-16 bg-black/50">
-            <div className="container">
-              <div className="text-center mb-12">
-                <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-wide">Conheça o nosso Menu</h2>
-                <p className="text-muted-foreground line-clamp-2 mx-auto max-w-xl">
-                  Venha viajar connosco pelos sabores da cozinha tradicional Portuguesa e Japonesa reservando uma mesa conosco.
-                </p>
-                <Menu />
-              </div>
-            </div>
-          </section>
-
           <section id="gallery" className="py-16">
             <div className="container">
               <div className="text-center mb-12">
                 <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-wide">Nossa Galeria</h2>
-                <p className="text-muted-foreground max-w-xl mx-auto">
+                <p className="text-muted-foreground">
                   Conheça um pouco da experiência que preparamos para você.
                 </p>
               </div>
+              <Gallery />
+            </div>
+          </section>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {imageIndices.map((imageNum, i) => (
-                  <div
-                    key={i}
-                    className="relative aspect-square overflow-hidden rounded-lg group cursor-pointer"
-                    onClick={() => openGallery(i)}
-                  >
-                    {/* The new image that will be revealed (only for the changing item) */}
-                    {fadingIndex === i && nextImage && (
-                      <div className="absolute inset-0 z-10">
-                        <Image
-                          src={`/gallery/IMG-20250514-WA00${nextImage}.jpg`}
-                          alt={`Nova imagem da galeria ${i + 1}`}
-                          fill
-                          className="object-cover"
-                          onError={(e) => {
-                            e.currentTarget.src = "/placeholder-image.jpg";
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    {/* Current image that fades out */}
-                    <div
-                      className={`absolute inset-0 z-20 ${fadingIndex === i ? "transition-opacity duration-500 ease-in-out opacity-0" : ""
-                        }`}
-                    >
-                      <Image
-                        src={`/gallery/IMG-20250514-WA00${imageNum}.jpg`}
-                        alt={`Imagem da galeria ${i + 1}`}
-                        fill
-                        className="object-cover transition-transform duration-1000 group-hover:scale-110"
-                        onError={(e) => {
-                          e.currentTarget.src = "/placeholder-image.jpg";
-                        }}
-                      />
-                    </div>
-
-                    {/* Hover overlay */}
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-1000 flex items-center justify-center z-30">
-                      <span className="text-white text-lg font-medium">Ver mais</span>
-                    </div>
-                  </div>
-                ))}
+          <section id="menu" className="py-16 bg-black/50">
+            <div className="container">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-wide">Conheça o nosso Menu</h2>
+                <p className="text-muted-foreground line-clamp-2">
+                  Venha viajar connosco pelos sabores da cozinha tradicional Portuguesa e Japonesa reservando uma mesa conosco.
+                </p>
+                <Menu />
               </div>
             </div>
           </section>
@@ -325,13 +281,13 @@ export default function RestaurantePage() {
             <div className="container">
               <div className="text-center mb-12">
                 <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-wide">Localização</h2>
-                <p className="text-muted-foreground max-w-2xl mx-auto">
+                <p className="text-muted-foreground">
                   Estamos localizados em um ponto privilegiado, com fácil acesso.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                <div className="h-full bg-muted rounded-lg overflow-hidden relative border">
+                <div className="h-full rounded-lg overflow-hidden relative border">
                   <Image src="/ryori-front.webp" alt="Restaurante Ryōri" fill className="object-cover brightness-[0.8]" />
                 </div>
 
@@ -394,14 +350,14 @@ export default function RestaurantePage() {
                 <h3 className="text-lg font-bold mb-4">Siga-nos</h3>
                 <div className="flex gap-3">
                   <a
-                    href="#"
+                    href="https://www.instagram.com/ryori_restaurante/"
                     aria-label="Instagram"
                     className="h-9 w-9 flex items-center justify-center rounded-full bg-muted hover:bg-muted/80 text-foreground"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line></svg>
                   </a>
                   <a
-                    href="#"
+                    href="https://www.facebook.com/RyoriSetubal/"
                     aria-label="Facebook"
                     className="h-9 w-9 flex items-center justify-center rounded-full bg-muted hover:bg-muted/80 text-foreground"
                   >
