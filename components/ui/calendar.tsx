@@ -78,7 +78,7 @@ function Calendar({
           "flex-1 h-8 sm:h-12 text-center text-sm p-0 relative",
           "[&:has([aria-selected].day-range-end)]:rounded-r-md",
           "[&:has([aria-selected].day-outside)]:bg-accent/50",
-          "[&:has([aria-selected])]:bg-accent",
+          "[&:has([aria-selected])]:bg-primary",
           "first:[&:has([aria-selected])]:rounded-l-md",
           "last:[&:has([aria-selected])]:rounded-r-md",
           "focus-within:relative focus-within:z-20"
