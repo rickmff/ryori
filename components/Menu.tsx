@@ -38,22 +38,36 @@ export default function Menu() {
   const [categoryOrder, setCategoryOrder] = useState<string[] | null>(null); // <-- Add state for order
   const [initialImages, setInitialImages] = useState<ExistingImage[]>([]);
   const [isPreviewReady, setIsPreviewReady] = useState(false);
-  const [showScrollIndicator, setShowScrollIndicator] = useState(true);
+  const [showScrollIndicator, setShowScrollIndicator] = useState({ left: false, right: true });
   const [activeCategory, setActiveCategory] = useState<string>("");
 
-  // Add function to handle scroll event
+  // Add new function to handle scroll buttons
+  const handleScroll = (direction: 'left' | 'right') => {
+    const tabsContainer = document.querySelector('.tabs-scroll-container');
+    if (tabsContainer) {
+      const scrollAmount = 200; // Adjust this value as needed
+      const newScrollPosition = direction === 'left'
+        ? tabsContainer.scrollLeft - scrollAmount
+        : tabsContainer.scrollLeft + scrollAmount;
+
+      tabsContainer.scrollTo({
+        left: newScrollPosition,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  // Update the handleTabsScroll function
   const handleTabsScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const element = e.currentTarget;
     const isScrollable = element.scrollWidth > element.clientWidth;
     const isScrolledToEnd = Math.abs(element.scrollWidth - element.clientWidth - element.scrollLeft) < 10;
+    const isScrolledToStart = element.scrollLeft === 0;
 
-    if (isScrollable && isScrolledToEnd) {
-      setShowScrollIndicator(false);
-    } else if (isScrollable) {
-      setShowScrollIndicator(true);
-    } else {
-      setShowScrollIndicator(false);
-    }
+    setShowScrollIndicator({
+      right: isScrollable && !isScrolledToEnd,
+      left: isScrollable && !isScrolledToStart
+    });
   };
 
   useEffect(() => {
@@ -158,14 +172,14 @@ export default function Menu() {
         <div className="container mx-auto sm:p-6 sm:max-w-4xl w-full px-0">
           {menu && orderedCategories.length > 0 && (
             <Tabs
-              value={activeCategory} // Controlled component using state
-              defaultValue={orderedCategories[0]} // Initial default if needed
+              value={activeCategory}
+              defaultValue={orderedCategories[0]}
               className="w-full pt-6 sm:p-6"
               onValueChange={handleTabChange}
             >
               <div className="relative">
                 <div
-                  className="flex flex-row justify-start sm:justify-evenly gap-2 overflow-x-auto overflow-y-hidden pb-2 mb-4"
+                  className="tabs-scroll-container flex flex-row justify-start sm:justify-evenly gap-2 overflow-x-auto overflow-y-hidden pb-2 mb-4 scrollbar-hide"
                   onScroll={handleTabsScroll}
                 >
                   <TabsList className="bg-transparent">
@@ -181,8 +195,19 @@ export default function Menu() {
                     ))}
                   </TabsList>
                 </div>
-                {showScrollIndicator && (
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 sm:hidden">
+                {showScrollIndicator.left && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 cursor-pointer" onClick={() => handleScroll('left')}>
+                    <div className="flex items-center">
+                      <div className="h-8 w-8 bg-black/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {showScrollIndicator.right && (
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 cursor-pointer" onClick={() => handleScroll('right')}>
                     <div className="flex items-center">
                       <div className="h-8 w-8 bg-black/20 backdrop-blur-sm rounded-full flex items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -237,6 +237,9 @@ export default function RestaurantePage() {
                     <a href="#menu" className="hover:bg-black/50 hover:text-white transition-all duration-300 hover:border-black">Ver Menu</a>
                   </Button>
                 </div>
+                {/*                 <div className="flex flex-col sm:flex-row gap-4">
+                  <Image src="/ryori-logo.png" alt="Restaurante Ryōri" width={100} height={100} />
+                </div> */}
               </div>
             </div>
           </section>

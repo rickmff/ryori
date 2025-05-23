@@ -104,3 +104,15 @@ body {
   scroll-behavior: smooth;
   transition: scroll 1.5s ease-in-out;
 }
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+  /* Chrome, Safari and Opera */
+}
