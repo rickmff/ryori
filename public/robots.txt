@@ -1,9 +1,0 @@
-# Allow all crawlers access to the site
-User-agent: *
-Allow: /
-
-# Disallow crawlers from accessing the admin area
-Disallow: /admin/
-
-# Location of the sitemap
-Sitemap: https://your-restaurant-url.com/sitemap.xml

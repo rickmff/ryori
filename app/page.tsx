@@ -14,7 +14,7 @@ import Gallery from "@/components/Gallery";
 
 export default function RestaurantePage() {
   const whatsappNumber = "351968217889"
-  const restaurantUrl = "https://ryori.pt"
+  const restaurantUrl = "https://ryorirestaurant.com"
   const imageUrl = `${restaurantUrl}/ryori-hero.jpg`
 
   // State to track the current set of images
@@ -134,6 +134,60 @@ export default function RestaurantePage() {
     "@context": "https://schema.org",
     "@type": "Restaurant",
     "name": "Ryōri",
+    "alternateName": "Ryōri Restaurante",
+    "description": "Restaurante de fusão que combina a tradição portuguesa com a sofisticação da culinária japonesa em Setúbal",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "PC Marquês de Pombal 2A",
+      "addressLocality": "Setúbal",
+      "postalCode": "2900-562",
+      "addressCountry": "PT",
+      "addressRegion": "Setúbal"
+    },
+    "geo": {
+      "@type": "GeoCoordinates",
+      "latitude": "38.5244",
+      "longitude": "-8.8882"
+    },
+    "telephone": "+351968217889",
+    "servesCuisine": ["Portuguesa", "Japonesa", "Fusão", "Fine Dining"],
+    "url": restaurantUrl,
+    "image": [
+      imageUrl,
+      `${restaurantUrl}/ryori-front.webp`
+    ],
+    "logo": `${restaurantUrl}/logo.png`,
+    "priceRange": "€€€",
+    "paymentAccepted": "Cash, Credit Card",
+    "currenciesAccepted": "EUR",
+    "hasMenu": `${restaurantUrl}#menu`,
+    "acceptsReservations": true,
+    "sameAs": [
+      "https://www.instagram.com/ryori_restaurante/",
+      "https://www.facebook.com/RyoriSetubal/",
+      "https://maps.app.goo.gl/iHR9UKvxR8pQEbvR7"
+    ],
+    "potentialAction": {
+      "@type": "ReserveAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": `https://wa.me/${whatsappNumber}`
+      }
+    },
+    "amenityFeature": [
+      {
+        "@type": "LocationFeatureSpecification",
+        "name": "Accessible",
+        "value": true
+      }
+    ]
+  };
+
+  const localBusinessSchema = {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "@id": "https://ryorirestaurant.com/#restaurant",
+    "name": "Ryōri Restaurante",
     "address": {
       "@type": "PostalAddress",
       "streetAddress": "PC Marquês de Pombal 2A",
@@ -141,14 +195,31 @@ export default function RestaurantePage() {
       "postalCode": "2900-562",
       "addressCountry": "PT"
     },
+    "geo": {
+      "@type": "GeoCoordinates",
+      "latitude": "38.5244",
+      "longitude": "-8.8882"
+    },
     "telephone": "+351968217889",
-    "servesCuisine": ["Portuguesa", "Japonesa", "Fusão"],
     "url": restaurantUrl,
     "image": imageUrl,
-    "priceRange": "€€€",
-    "verification": {
-      "google": "y0I8IQ4ZJuwlPib7wxqweHnGxcYg6kr2IUdMWSqGyco",
-    },
+    "openingHoursSpecification": [
+      {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+        "opens": "19:00",
+        "closes": "00:00"
+      }
+    ],
+    "areaServed": {
+      "@type": "GeoCircle",
+      "geoMidpoint": {
+        "@type": "GeoCoordinates",
+        "latitude": "38.5244",
+        "longitude": "-8.8882"
+      },
+      "geoRadius": "50000"
+    }
   };
 
   return (
@@ -157,6 +228,12 @@ export default function RestaurantePage() {
         id="restaurant-schema"
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(restaurantSchema) }}
+      />
+
+      <Script
+        id="local-business-schema"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
       />
 
       {/* Gallery Dialog */}

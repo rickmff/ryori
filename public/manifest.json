@@ -1,0 +1,33 @@
+{
+  "name": "Ryōri Restaurante",
+  "short_name": "Ryōri",
+  "description": "Restaurante de fusão Portuguesa e Japonesa em Setúbal",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait-primary",
+  "categories": [
+    "food",
+    "restaurants",
+    "dining"
+  ],
+  "lang": "pt-PT",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "scope": "/",
+  "id": "ryori-restaurant"
+}
