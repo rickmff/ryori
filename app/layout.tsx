@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   title: 'Ryori Restaurante',
   description: 'Ryori Restaurante - Convidamos-o a embarcar numa viagem gastronómica única que funde a tradição portuguesa com a sofisticação da culinária japonesa. O nosso nome, "Ryōri" (料理), significa "arte de cozinhar" em japonês, refletindo a nossa dedicação à excelência culinária.',
   generator: 'Ryori Restaurante',
+  verification: {
+    google: 'y0I8IQ4ZJuwlPib7wxqweHnGxcYg6kr2IUdMWSqGyco',
+  },
 }
 
 export default function RootLayout({
