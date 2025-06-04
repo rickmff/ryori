@@ -146,6 +146,9 @@ export default function RestaurantePage() {
     "url": restaurantUrl,
     "image": imageUrl,
     "priceRange": "€€€",
+    "verification": {
+      "google": "y0I8IQ4ZJuwlPib7wxqweHnGxcYg6kr2IUdMWSqGyco",
+    },
   };
 
   return (
