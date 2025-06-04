@@ -13,7 +13,7 @@ import { X, ChevronLeft, ChevronRight } from "lucide-react"
 import Gallery from "@/components/Gallery";
 
 export default function RestaurantePage() {
-  const whatsappNumber = process.env.WHATSAPP_NUMBER || "351928149095"
+  const whatsappNumber = "351968217889"
   const restaurantUrl = "https://ryori.pt"
   const imageUrl = `${restaurantUrl}/ryori-hero.jpg`
 
