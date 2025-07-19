@@ -40,12 +40,6 @@ export const metadata: Metadata = {
         height: 630,
         alt: 'Ryōri Restaurante - Interior elegante com vista para a cozinha',
       },
-      {
-        url: 'https://ryorirestaurant.com/ryori-front.webp',
-        width: 1200,
-        height: 630,
-        alt: 'Fachada do Ryōri Restaurante em Setúbal',
-      }
     ],
     locale: 'pt_PT',
     type: 'website',
